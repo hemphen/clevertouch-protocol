@@ -1,0 +1,88 @@
+# Shared values and identifiers
+
+[Human API](human-api.md) · [Machine API](machine-api.md) · [RF](rf.md)
+
+## Evidence labels
+
+| Label | Meaning |
+| --- | --- |
+| **Observed** | Present in validated traffic, or verified by a deliberate device action. Limited to the equipment examined. |
+| **Client** | Implemented or consumed by the Python client or supplied web app; not necessarily independently observed on the wire. |
+| **Strong** | Consistent evidence supports the interpretation, but no decisive controlled test. |
+| **Tentative** | Plausible interpretation with unresolved alternatives. |
+| **Unknown** | Bytes or fields are known; meaning or behaviour is not. |
+
+Unlabelled encoding and layout rules describe the observed format. They are not
+claims about every firmware version. Unknown fields should be preserved, and
+unrecognised modes should remain visible as raw values.
+
+## Identifiers
+
+| Identifier | Scope and use |
+| --- | --- |
+| `user_id` | Cloud account identifier returned by `human/user/read/`. |
+| `smarthome_id` | Cloud home identifier; used by home reads and command submission. |
+| `id_device` | Panel-local device identifier, e.g. synthetic `C007-006`; used inside `query[...]`. The Python client recognises prefixes `C` radiator, `E` light, `O` outlet. |
+| `id` / request parameter `device_id` | Cloud device database identifier. The app uses it for schedule operations. **Not interchangeable with `id_device`.** |
+| `num_zone` | Panel-local zone number; join to `zones[].num_zone`. |
+| Machine field `"2"` | Local device identifier in the `Cnnn-nnn` form. It is not a model number or RF address. |
+| Machine field `"4"` | Device index; observed to match the first numeric group in field `"2"`. It is not the heating mode. |
+| RF address | Four on-wire bytes. The first appears to select a class/family; the last three identify a unit. See [RF addressing](rf.md#addressing). |
+
+No general algorithm converting a cloud/local device ID to an RF address is
+known. Matching changing temperature and mode across the two links can establish
+a correspondence for an installation; it does not establish an address formula.
+
+## Temperatures
+
+The named human API temperature fields, mapped machine fields and RF temperature
+words use **tenths of a degree Fahrenheit**, irrespective of the UI display unit:
+
+```text
+C = (raw - 320) / 18
+F = raw / 10
+raw = round(18 * C + 320)
+```
+
+| Raw decimal | Raw hex | Interpretation |
+| ---: | --- | --- |
+| 320 | `0140` | 0 °C; observed RF target while Off |
+| 680 | `02A8` | 20 °C |
+| 689 | `02B1` | 20.5 °C |
+| 698 | `02BA` | 21 °C |
+| 2124 | `084C` | Unavailable temperature; do not display as 100.22 °C |
+
+RF words are unsigned big-endian. HTTP numeric values commonly arrive as decimal
+strings. Preserve unavailable values separately from valid zero temperatures.
+The app's rounding and special handling of zero are UI implementation details,
+not a different temperature scale. Its `param_c_f` selects `c` or `f` for display.
+Do not apply this temperature formula to every numeric field: machine `"23"`,
+for example, is a configured wattage.
+
+## Heating modes
+
+The following values agree between the human client's `gv_mode`, machine `"22"`
+and RF `8A`/`94` **for the observed radiator profile**. This does not make every
+mode in the wider web app valid on every radiator.
+
+| Decimal | Meaning | Active temperature | RF evidence |
+| ---: | --- | --- | --- |
+| 0 | Comfort | Comfort setpoint | Observed |
+| 1 | Off | RF target observed as raw 320 | Observed |
+| 2 | Frost / anti-freeze | Frost setpoint | Observed |
+| 3 | Eco / reduced | Eco setpoint | Observed |
+| 4 | Boost / timer | Boost setpoint | Observed |
+| 8 | Program, Comfort phase | Comfort setpoint | Observed |
+| 11 | Program, Eco phase | Eco setpoint | Observed at a schedule transition |
+
+Boost selects a timed setpoint; it need not increase heating. Switching modes
+can restore a stored setpoint. The RF active target is not a permanent Comfort
+register. Additional **Client-only** modes are listed in the human API reference.
+
+## Completion is layer-specific
+
+A successful human API write means the server accepted the request. An HTTP
+response to a machine upload means the server answered the panel. Valid RF CRCs
+mean a frame is intact. None of these alone proves that a radiator applied a
+command. Read back device state; a subsequent radiator report provides stronger
+confirmation than an optimistic app update or an acknowledgement-shaped frame.

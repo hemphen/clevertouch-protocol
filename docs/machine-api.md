@@ -1,0 +1,138 @@
+# Machine API: Touch E3 ↔ server
+
+[Overview](../README.md) · [Shared values](common.md) · [Human API](human-api.md)
+
+This is the panel-facing protocol observed on Purmo/LVI Touch E3. The panel
+initiates the connection; server-to-panel information travels in HTTP responses.
+It is not the human API and is not evidence of a local HTTP service on the panel.
+
+## Transport and request format
+
+| Property | Observed value |
+| --- | --- |
+| Base | `http://e3.lvi.eu/api/v0.1/` |
+| Transport | HTTP/1.1 over TCP port 80, without TLS in the observed profile |
+| Method | `GET` |
+| Parameters | JSON object encoded as the final URL path segment |
+| Value types | Numeric JSON keys; mostly string values |
+| User-Agent | `Mozilla/5.0 SmartHome` |
+| Connection header | `Proxy-Connection: keep-alive` was present; necessity unknown |
+| Authentication | No bearer header observed; machine identity/session binding remains incompletely understood |
+
+Percent-encode the JSON as a path segment, not as form data or a `?query` string.
+A schematic poll is:
+
+```http
+GET /api/v0.1/machine/query/check/%7B%221%22%3A%22CURSOR_EXAMPLE%22%7D HTTP/1.1
+Host: e3.lvi.eu
+User-Agent: Mozilla/5.0 SmartHome
+```
+
+The panel was observed re-resolving the hostname on most connection cycles.
+Polls occurred roughly every 5–15 seconds. These are observed client behaviours,
+not mandatory DNS, timeout or retry rules.
+
+## Messages in each direction
+
+| Request, panel → server | Payload | Response, server → panel |
+| --- | --- | --- |
+| `machine/device/edit/<JSON>` | One device's state snapshot, with numeric fields below | HTTP 200, `{"code":"8","data":{"100":"<next-cursor>"}}` |
+| `machine/query/check/<JSON>` | `{"1":"<cursor>"}` | Idle: HTTP 200, `{"code":"2","data":{"100":"<next-cursor>"}}` |
+| Same check, command pending | Same request family | **Unknown:** no validated non-idle command response schema |
+
+A common cycle uploads state, receives a cursor in `data["100"]`, then polls
+using that cursor as request field `"1"`. Other connections contain only a poll.
+A state upload is therefore not required on every check. Connections commonly
+close after the poll response; the observed cadence alone does not prove a
+particular long-poll timeout contract.
+
+The machine response `code` is a **bare string**. Human API responses use a
+nested `{code,key,value}` object. Do not share an envelope parser without
+handling this difference.
+
+Field `"1"` and response field `"100"` behave like opaque cursors. Limited idle
+checks accepted missing/fabricated cursor input, but this does **not** establish
+the authentication or routing requirements for real command delivery, state
+writes, device registration or other machine endpoints. Preserve returned
+values and treat them as private session material; no cursor-generation or
+home-binding algorithm is established.
+
+## Device upload fields
+
+Field numbers below are JSON string keys, not byte offsets. The payload reports
+one device, rather than an entire home. Known numbers use decimal string values.
+
+| Key | Meaning | Evidence / qualification |
+| --- | --- | --- |
+| `1` | Opaque cursor/session value | Unknown exact semantics |
+| `2` | Local device identifier, e.g. synthetic `C007-006` | Observed; not a model number |
+| `3` | Display label | Observed |
+| `4` | Device index | Observed; **not mode** |
+| `6` | Compact weekly schedule | Strong structure: 336 characters = 7 × 48 half-hour slots; day order and character meanings unresolved |
+| `7` | Comfort setpoint | Observed deliberate setpoint change |
+| `8` | Frost setpoint | Strong |
+| `9` | Eco/reduced setpoint | Strong |
+| `10`, `11` | Stored temperature values | One corresponds to Boost; their individual mapping is unresolved |
+| `12`, `13` | Temperature-like values, possibly lower/upper bounds | Tentative; values corresponding to 5 °C and 30 °C observed |
+| `14` | Boost/timer value in seconds | Strong; counts down during Boost, may retain configured duration while inactive |
+| `16` | Measured air temperature | Observed correlation with RF `4B`; `2124` means unavailable |
+| `17` | Candidate second temperature channel | Tentative; observed as `2124`, unavailable |
+| `22` | Active mode | Observed agreement with RF `8A`/`94` for common modes |
+| `23` | Configured rated power, watts | Observed deliberate wattage changes; not live electrical power |
+| `33` | Candidate heating-active flag | Tentative; intermittently changes around heating activity, not conclusively mapped |
+| `34` | Status bitfield | Strong: bit `0x2000` correlates with unavailable temperature; meaning of `0x1000` unresolved |
+| `35` | Unknown field | No meaning established |
+
+A synthetic subset of a decoded upload is:
+
+```json
+{
+  "1": "CURSOR_EXAMPLE",
+  "2": "C007-006",
+  "3": "Example radiator",
+  "4": "7",
+  "7": "698",
+  "8": "446",
+  "9": "590",
+  "14": "7200",
+  "16": "680",
+  "17": "2124",
+  "22": "0",
+  "23": "1000",
+  "34": "0"
+}
+```
+
+This omits unmapped fields and the schedule for readability; it is **not** a
+validated minimal accepted write. Use [temperature conversion](common.md#temperatures)
+only for the mapped temperature fields. Panel count was not identified in the
+observed upload; a settings change producing no visible field change does not
+prove it is never transferred elsewhere. For a two-panel radiator, whether
+field `23` is total or per-panel power is unresolved.
+
+## Receiving and applying state
+
+For a receiver of panel uploads, preserve unknown keys and the distinction
+between strings, missing fields and unavailable temperatures. A valid reading
+may be cached; it is not by itself proof of current radio liveness. Bit `0x2000`
+of field `34` is useful supporting evidence for an unavailable reading, not a
+complete documented device-health model.
+
+Local panel changes were reported upward within roughly 1–7 seconds in the
+observed transitions. That measures **panel → server reporting**, not app →
+radiator command latency, and it is not a guaranteed interval.
+
+## Downstream commands: known boundary
+
+The human API queues changes using `human/query/push/`; the panel polls
+`machine/query/check/`. They are plausibly the two ends of command delivery,
+but the actual non-idle response, command identifiers, acknowledgement mechanism,
+expiry handling and error responses have not been established in the available
+evidence. Do not fabricate a command envelope by replacing named human fields
+with numeric upload keys. A state-upload key is not automatically a writable
+command key.
+
+Boot registration, home association, firmware transfer and other machine
+endpoints are also outside the observed subset. An implementation can parse
+uploads and recognise idle replies from this document; it cannot yet replace
+the server's command-delivery side reliably.
