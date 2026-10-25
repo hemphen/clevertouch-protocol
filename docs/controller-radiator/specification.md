@@ -1,6 +1,6 @@
-# RF protocol: Touch E3 ↔ radiators
+# Controller–radiator RF protocol specification
 
-[Overview](../README.md) · [Shared values](common.md) · [Machine API](machine-api.md)
+[Overview](../../README.md) · [Shared values](../common.md) · [Controller–server API](../controller-server/specification.md)
 
 This describes the observed Purmo/LVI Touch E3 profile of a Watts-family
 protocol. Frame layouts and CRCs are established; some field meanings and the
@@ -130,7 +130,7 @@ Multi-byte numeric words below are big-endian unless explicitly stated.
 | Tag | Value bytes | Message | Meaning / observed value | Evidence |
 | --- | ---: | --- | --- | --- |
 | `DF` | 4 | Report | Opaque radiator state/configuration word | Unknown |
-| `4B` | 2 | Report, state | Air temperature, uint16 | Strong; agrees with machine field `16` |
+| `4B` | 2 | Report, state | Air temperature, uint16 | Strong; agrees with controller upload field `16` |
 | `8A` | 3 | Report | `[target:uint16][mode:uint8]`, active target and mode | Observed |
 | `94` | 3 | State | Same layout, controller-side target and mode | Observed with panel changes |
 | `E1` | 4 | Report, state | `[00][front maximum %][channel 1 duty?][channel 2 duty?]` | Maximum confirmed; duty scaling tentative |
@@ -154,7 +154,7 @@ was not observed on this equipment. It is not part of the established inventory.
 ### Temperature and mode (`4B`, `8A`, `94`)
 
 Use `(raw - 320) / 18` °C; `084C` means unavailable. Mode is the final byte of
-`8A`/`94`, with values in the [common mode table](common.md#heating-modes).
+`8A`/`94`, with values in the [common mode table](../common.md#heating-modes).
 Examples: `8A 02 A8 00` reports Comfort at 20 °C; `94 01 40 01` carries Off
 with a 0 °C target. Changing to Eco changes the active target without proving
 that the stored Comfort setting has been overwritten.
@@ -190,7 +190,7 @@ power_W = (P1_W * duty1_pct + P2_W * duty2_pct) / 100
 interval_Wh = (P1_W * on_time1_s + P2_W * on_time2_s) / 3600
 ```
 
-These are conditional estimates, not measured consumption. Machine field `23`
+These are conditional estimates, not measured consumption. Controller upload field `23`
 gives a configured rating, but its division across panels is unresolved.
 
 ### Opaque state and clock fields
@@ -238,7 +238,7 @@ not establish replay acceptance, absence of hidden state, or acceptance of an
 arbitrary controller identity.
 
 Re-inclusion reset the tested radiator's stored values to Comfort 19 °C,
-Frost 7 °C, Eco 15.5 °C, both unresolved machine temperature fields `10`/`11`
+Frost 7 °C, Eco 15.5 °C, both unresolved controller upload temperature fields `10`/`11`
 to 25 °C, and timer to 7200 seconds. These are **observed reset values for that
 unit**, not universal factory defaults. Panel count and wattage settings are
 separate from the four-frame exchange; their RF encoding is not established.

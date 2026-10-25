@@ -2,13 +2,13 @@
 
 [Overview](../README.md)
 
-This reference was compiled on 25 October 2026. It describes a source snapshot,
+Initially compiled on 25 October 2026; schedule submission clarified on 26 October 2026. It describes a source snapshot,
 not a promise that the provider's deployed service remains unchanged. No live
 account commands or RF transmissions were made to prepare it.
 
 | Source | What it establishes |
 | --- | --- |
-| [hemphen/clevertouch](https://github.com/hemphen/clevertouch/tree/252274f52b5deab81d5d986300f53fb41511ea44), revision `252274f52b5deab81d5d986300f53fb41511ea44` | Implemented human API authentication, read/write requests, device fields, modes and temperature conversion |
+| [hemphen/clevertouch](https://github.com/hemphen/clevertouch/tree/252274f52b5deab81d5d986300f53fb41511ea44), revision `252274f52b5deab81d5d986300f53fb41511ea44` | Implemented app–server API authentication, read/write requests, device fields, modes and temperature conversion |
 | Supplied `script.js`, app version string `2.8.1` | App request construction, form encoding, modes, schedules, diagnostics and statistics; static client evidence |
 | Supplied `vendor.js` | Supporting JavaScript dependencies; no additional `human/` or `machine/` endpoint definitions identified |
 | Private Touch E3 research material, source snapshot 25 October 2026 | Machine uploads and idle responses, RF frame validation, controlled mode/settings changes and observed inclusion exchange |
@@ -31,7 +31,9 @@ For maintainers checking the supplied app, useful source locations are:
 | Common modes and displayed targets | 7074–7137, `gv_mode` switch |
 | Device command fields | 14500–14583, `query` construction |
 | Week structure and built-in compact templates | 15455–15480, `arrayDayWeek`, `objJSONProgram`, `programModels` |
-| Structured schedule submission | 16240–16298 and 16530–16546, `apply_program` |
+| Structured schedule submission | 16240–16298 (add interval); 16341–16546, `saveEntireProgram` (`new=true`) |
+| Quarter-hour boundaries | 16040–16094, `bindStartAndEndTime`; 16884–16894, `stepminute="15"` |
+| Decoded schedule response | 16577–16740 and 17101–17165, `updateTimeLineProgram`, `initEditRangePart2`, `updateProgramOnTimeLine` |
 | Copy/store/queue schedules | 17341–17503, `copyProgramFrom`, `deleteEntireProgram` |
 | Statistics | 2831–2872 and 17540–17615, `StatsService`, `initStats` |
 | Default client timings | 18833–18877, `config` |
@@ -43,8 +45,8 @@ For maintainers checking the supplied app, useful source locations are:
 
 | Link | Established subset | Main unresolved part |
 | --- | --- | --- |
-| Human API | Core library requests; additional app request/response usage | Full server validation, complete error schemas, provider-specific support |
-| Machine API | State-upload keys, success and idle envelopes, polling pattern | Non-idle command response, acknowledgements, identity/registration and error handling |
+| App–server API | Core library requests; additional app request/response usage | Full server validation, complete error schemas, provider-specific support |
+| Controller–server API | State-upload keys, success and idle envelopes, polling pattern | Non-idle command response, acknowledgements, identity/registration and error handling |
 | RF | Dual-CRC frame envelope, ordinary records, state in both directions, inclusion exchange | Custom transmission acceptance, timing/retries, control loop, schedule transfer, opaque fields |
 
 Evidence labels apply to individual claims. A field appearing in client code is

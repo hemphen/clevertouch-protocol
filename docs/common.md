@@ -1,6 +1,6 @@
 # Shared values and identifiers
 
-[Human API](human-api.md) · [Machine API](machine-api.md) · [RF](rf.md)
+[App–server API](app-server/specification.md) · [Controller–server API](controller-server/specification.md) · [RF](controller-radiator/specification.md)
 
 ## Evidence labels
 
@@ -25,9 +25,9 @@ unrecognised modes should remain visible as raw values.
 | `id_device` | Panel-local device identifier, e.g. synthetic `C007-006`; used inside `query[...]`. The Python client recognises prefixes `C` radiator, `E` light, `O` outlet. |
 | `id` / request parameter `device_id` | Cloud device database identifier. The app uses it for schedule operations. **Not interchangeable with `id_device`.** |
 | `num_zone` | Panel-local zone number; join to `zones[].num_zone`. |
-| Machine field `"2"` | Local device identifier in the `Cnnn-nnn` form. It is not a model number or RF address. |
-| Machine field `"4"` | Device index; observed to match the first numeric group in field `"2"`. It is not the heating mode. |
-| RF address | Four on-wire bytes. The first appears to select a class/family; the last three identify a unit. See [RF addressing](rf.md#addressing). |
+| Controller upload field `"2"` | Local device identifier in the `Cnnn-nnn` form. It is not a model number or RF address. |
+| Controller upload field `"4"` | Device index; observed to match the first numeric group in field `"2"`. It is not the heating mode. |
+| RF address | Four on-wire bytes. The first appears to select a class/family; the last three identify a unit. See [RF addressing](controller-radiator/specification.md#addressing). |
 
 No general algorithm converting a cloud/local device ID to an RF address is
 known. Matching changing temperature and mode across the two links can establish
@@ -35,7 +35,7 @@ a correspondence for an installation; it does not establish an address formula.
 
 ## Temperatures
 
-The named human API temperature fields, mapped machine fields and RF temperature
+The named app–server API temperature fields, mapped controller upload fields and RF temperature
 words use **tenths of a degree Fahrenheit**, irrespective of the UI display unit:
 
 ```text
@@ -56,12 +56,12 @@ RF words are unsigned big-endian. HTTP numeric values commonly arrive as decimal
 strings. Preserve unavailable values separately from valid zero temperatures.
 The app's rounding and special handling of zero are UI implementation details,
 not a different temperature scale. Its `param_c_f` selects `c` or `f` for display.
-Do not apply this temperature formula to every numeric field: machine `"23"`,
+Do not apply this temperature formula to every numeric field: controller upload `"23"`,
 for example, is a configured wattage.
 
 ## Heating modes
 
-The following values agree between the human client's `gv_mode`, machine `"22"`
+The following values agree between the app client's `gv_mode`, controller upload `"22"`
 and RF `8A`/`94` **for the observed radiator profile**. This does not make every
 mode in the wider web app valid on every radiator.
 
@@ -77,12 +77,12 @@ mode in the wider web app valid on every radiator.
 
 Boost selects a timed setpoint; it need not increase heating. Switching modes
 can restore a stored setpoint. The RF active target is not a permanent Comfort
-register. Additional **Client-only** modes are listed in the human API reference.
+register. Additional **Client-only** modes are listed in the app–server API reference.
 
 ## Completion is layer-specific
 
-A successful human API write means the server accepted the request. An HTTP
-response to a machine upload means the server answered the panel. Valid RF CRCs
+A successful app–server API write means the server accepted the request. An HTTP
+response to a controller upload means the server answered the panel. Valid RF CRCs
 mean a frame is intact. None of these alone proves that a radiator applied a
 command. Read back device state; a subsequent radiator report provides stronger
 confirmation than an optimistic app update or an acknowledgement-shaped frame.

@@ -7,15 +7,16 @@ errors; uncertain fields are marked where they are described.
 
 | Link | Transport | Reference |
 | --- | --- | --- |
-| App / web ↔ provider server | HTTPS, form-encoded requests and JSON responses | [Human API](docs/human-api.md) |
-| Touch E3 ↔ provider server | HTTP, JSON in GET paths and JSON responses | [Machine API](docs/machine-api.md) |
-| Touch E3 ↔ radiators | 868 MHz FSK, binary frames | [RF protocol](docs/rf.md) |
+| App / web ↔ provider server | HTTPS, form-encoded requests and JSON responses | [App–server API](docs/app-server/README.md) |
+| Touch E3 ↔ provider server | HTTP, JSON in GET paths and JSON responses | [Controller–server API](docs/controller-server/README.md) |
+| Touch E3 ↔ radiators | 868 MHz FSK, binary frames | [RF protocol](docs/controller-radiator/README.md) |
 
-Start with [shared values and identifiers](docs/common.md). Additional app
-operations are in [schedules and diagnostics](docs/app-operations.md), and
-[source coverage](docs/sources.md) explains the basis and limits of this reference.
+Start with [shared values and identifiers](docs/common.md). The app–server
+specification includes [weekly schedule submission](docs/app-server/specification.md#weekly-schedules)
+and diagnostics. [Source coverage](docs/sources.md) explains the basis and limits
+of this reference.
 
-The human API supports reading state and submitting commands. The machine API's
+The app–server API supports reading state and submitting commands. The controller–server API's
 state upload and idle polling are documented; its downstream command envelope
 is still unknown. RF reporting, controller state frames and an inclusion
 exchange have been observed, but a replacement transmitter has not been validated.
