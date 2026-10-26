@@ -1,6 +1,6 @@
-# Controller–radiator RF protocol specification
+# radiator-rf protocol specification
 
-[Overview](../../README.md) · [Shared values](../common.md) · [Controller–server API](../controller-server/specification.md)
+[Overview](../../README.md) · [Shared values](../common.md) · [clevertouch-upstream protocol](../clevertouch-upstream/specification.md)
 
 This describes the observed Purmo/LVI Touch E3 profile of a Watts-family
 protocol. Frame layouts and CRCs are established; some field meanings and the

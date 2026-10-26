@@ -1,6 +1,6 @@
 # Shared values and identifiers
 
-[App–server API](app-server/specification.md) · [Controller–server API](controller-server/specification.md) · [RF](controller-radiator/specification.md)
+[Clevertouch Web API](web-api/specification.md) · [clevertouch-upstream protocol](clevertouch-upstream/specification.md) · [RF](radiator-rf/specification.md)
 
 ## Evidence labels
 
@@ -27,7 +27,7 @@ unrecognised modes should remain visible as raw values.
 | `num_zone` | Panel-local zone number; join to `zones[].num_zone`. |
 | Controller upload field `"2"` | Local device identifier in the `Cnnn-nnn` form. It is not a model number or RF address. |
 | Controller upload field `"4"` | Device index; observed to match the first numeric group in field `"2"`. It is not the heating mode. |
-| RF address | Four on-wire bytes. The first appears to select a class/family; the last three identify a unit. See [RF addressing](controller-radiator/specification.md#addressing). |
+| RF address | Four on-wire bytes. The first appears to select a class/family; the last three identify a unit. See [RF addressing](radiator-rf/specification.md#addressing). |
 
 No general algorithm converting a cloud/local device ID to an RF address is
 known. Matching changing temperature and mode across the two links can establish
@@ -35,7 +35,7 @@ a correspondence for an installation; it does not establish an address formula.
 
 ## Temperatures
 
-The named app–server API temperature fields, mapped controller upload fields and RF temperature
+The named Clevertouch Web API temperature fields, mapped controller upload fields and RF temperature
 words use **tenths of a degree Fahrenheit**, irrespective of the UI display unit:
 
 ```text
@@ -77,11 +77,11 @@ mode in the wider web app valid on every radiator.
 
 Boost selects a timed setpoint; it need not increase heating. Switching modes
 can restore a stored setpoint. The RF active target is not a permanent Comfort
-register. Additional **Client-only** modes are listed in the app–server API reference.
+register. Additional **Client-only** modes are listed in the Clevertouch Web API reference.
 
 ## Completion is layer-specific
 
-A successful app–server API write means the server accepted the request. An HTTP
+A successful Clevertouch Web API write means the server accepted the request. An HTTP
 response to a controller upload means the server answered the panel. Valid RF CRCs
 mean a frame is intact. None of these alone proves that a radiator applied a
 command. Read back device state; a subsequent radiator report provides stronger

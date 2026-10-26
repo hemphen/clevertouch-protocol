@@ -8,7 +8,7 @@ account commands or RF transmissions were made to prepare it.
 
 | Source | What it establishes |
 | --- | --- |
-| [hemphen/clevertouch](https://github.com/hemphen/clevertouch/tree/252274f52b5deab81d5d986300f53fb41511ea44), revision `252274f52b5deab81d5d986300f53fb41511ea44` | Implemented app–server API authentication, read/write requests, device fields, modes and temperature conversion |
+| [hemphen/clevertouch](https://github.com/hemphen/clevertouch/tree/252274f52b5deab81d5d986300f53fb41511ea44), revision `252274f52b5deab81d5d986300f53fb41511ea44` | Implemented Clevertouch Web API authentication, read/write requests, device fields, modes and temperature conversion |
 | Supplied `script.js`, app version string `2.8.1` | App request construction, form encoding, modes, schedules, diagnostics and statistics; static client evidence |
 | Supplied `vendor.js` | Supporting JavaScript dependencies; no additional `human/` or `machine/` endpoint definitions identified |
 | Private Touch E3 research material, source snapshot 25 October 2026 | Machine uploads and idle responses, RF frame validation, controlled mode/settings changes and observed inclusion exchange |
@@ -45,8 +45,8 @@ For maintainers checking the supplied app, useful source locations are:
 
 | Link | Established subset | Main unresolved part |
 | --- | --- | --- |
-| App–server API | Core library requests; additional app request/response usage | Full server validation, complete error schemas, provider-specific support |
-| Controller–server API | State-upload keys, success and idle envelopes, polling pattern | Non-idle command response, acknowledgements, identity/registration and error handling |
+| Clevertouch Web API | Core library requests; additional app request/response usage | Full server validation, complete error schemas, provider-specific support |
+| clevertouch-upstream protocol | State-upload keys, success and idle envelopes, polling pattern | Non-idle command response, acknowledgements, identity/registration and error handling |
 | RF | Dual-CRC frame envelope, ordinary records, state in both directions, inclusion exchange | Custom transmission acceptance, timing/retries, control loop, schedule transfer, opaque fields |
 
 Evidence labels apply to individual claims. A field appearing in client code is

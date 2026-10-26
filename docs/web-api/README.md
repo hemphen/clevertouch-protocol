@@ -1,4 +1,4 @@
-# App ↔ provider server
+# Clevertouch Web API
 
 The HTTPS API used by the web app and client libraries to read homes and
 devices, submit commands, and manage weekly schedules. Authentication uses an

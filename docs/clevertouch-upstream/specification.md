@@ -1,10 +1,10 @@
-# Controller–server protocol specification
+# clevertouch-upstream protocol specification
 
-[Overview](../../README.md) · [Shared values](../common.md) · [App–server API](../app-server/specification.md)
+[Overview](../../README.md) · [Shared values](../common.md) · [Clevertouch Web API](../web-api/specification.md)
 
 This is the panel-facing protocol observed on Purmo/LVI Touch E3. The panel
 initiates the connection; server-to-panel information travels in HTTP responses.
-It is not the app–server API and is not evidence of a local HTTP service on the panel.
+It is not the Clevertouch Web API and is not evidence of a local HTTP service on the panel.
 
 ## Transport and request format
 
@@ -46,7 +46,7 @@ A state upload is therefore not required on every check. Connections commonly
 close after the poll response; the observed cadence alone does not prove a
 particular long-poll timeout contract.
 
-The controller-facing response `code` is a **bare string**. App–server API responses use a
+The controller-facing response `code` is a **bare string**. Clevertouch Web API responses use a
 nested `{code,key,value}` object. Do not share an envelope parser without
 handling this difference.
 
@@ -124,7 +124,7 @@ radiator command latency, and it is not a guaranteed interval.
 
 ## Downstream commands: known boundary
 
-The app–server API queues changes using `human/query/push/`; the panel polls
+The Clevertouch Web API queues changes using `human/query/push/`; the panel polls
 `machine/query/check/`. They are plausibly the two ends of command delivery,
 but the actual non-idle response, command identifiers, acknowledgement mechanism,
 expiry handling and error responses have not been established in the available
@@ -138,5 +138,5 @@ uploads and recognise idle replies from this document; it cannot yet replace
 the server's command-delivery side reliably.
 
 For custom weekly schedules, the app submits named-day intervals to the server;
-see [weekly schedule submission](../app-server/specification.md#weekly-schedules).
+see [weekly schedule submission](../web-api/specification.md#weekly-schedules).
 The server-side compact encoding is not available in the supplied app code.

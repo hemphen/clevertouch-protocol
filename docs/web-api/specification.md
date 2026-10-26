@@ -1,4 +1,4 @@
-# App–server protocol specification
+# Clevertouch Web API specification
 
 [Overview](../../README.md) · [Shared values](../common.md)
 
@@ -36,7 +36,7 @@ attempts refresh with 40 seconds of remaining validity; that is a client choice.
 The app adds `lang` (default `en_GB`). It also sends a legacy body field `token`
 in many calls while supplying the bearer header. The Python implementation does
 not require that body field for the three core endpoints below. These are
-separate token mechanisms; do not substitute a controller–server cursor for either.
+separate token mechanisms; do not substitute a clevertouch-upstream cursor for either.
 
 ## Form encoding and response envelope
 
@@ -175,7 +175,7 @@ ID or end-to-end acknowledgement in this core API subset. Do not blindly retry
 a timed command after an ambiguous transport failure: it may already have run.
 
 The operations below are **Client** evidence from the supplied app (`script.js`,
-version string 2.8.1). Requests use the app–server API's POST/form/bearer conventions.
+version string 2.8.1). Requests use the Clevertouch Web API's POST/form/bearer conventions.
 Response fields listed are those consumed by the app, not complete schemas.
 These operations extend the Python client's core read/write subset and have not
 been independently exercised for this reference.
@@ -348,7 +348,7 @@ would fit, but the packing, value mapping, day order and rounding are unverified
 Neither supplied JavaScript file contains the server's interval-to-string codec.
 Use the structured endpoint for custom schedules rather than guessing that codec.
 
-The controller–server downstream command envelope and any RF transfer of a whole
+The clevertouch-upstream downstream command envelope and any RF transfer of a whole
 week remain unknown. Observing a schedule in a panel upload does not establish
 that the same payload can be sent back to program it.
 
