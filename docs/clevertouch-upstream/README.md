@@ -9,4 +9,4 @@ Read the [protocol specification](specification.md). See also
 [shared values](../common.md) and the [protocol overview](../../README.md).
 
 The research daemon for this protocol is `clevertocuhed` in
-[clevertouch-radio](https://github.com/hemphen/clevertouch-radio/tree/main/clevertocuhed).
+[clevertouch-radio](https://github.com/hemphen/clevertouch-radio/tree/protocol-tools/clevertocuhed).
