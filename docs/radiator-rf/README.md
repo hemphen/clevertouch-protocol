@@ -8,4 +8,4 @@ Read the [protocol specification](specification.md). See also
 [shared values](../common.md) and the [protocol overview](../../README.md).
 
 The research daemon for this protocol is `radiatord` in
-[clevertouch-radio](https://github.com/hemphen/clevertouch-radio/tree/protocol-tools/radiatord).
+[clevertouch-radio](https://github.com/hemphen/clevertouch-radio/tree/main/radiatord).
