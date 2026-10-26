@@ -38,7 +38,7 @@ not mandatory DNS, timeout or retry rules.
 | --- | --- | --- |
 | `machine/device/edit/<JSON>` | One device's state snapshot, with numeric fields below | HTTP 200, `{"code":"8","data":{"100":"<next-cursor>"}}` |
 | `machine/query/check/<JSON>` | `{"1":"<cursor>"}` | Idle: HTTP 200, `{"code":"2","data":{"100":"<next-cursor>"}}` |
-| Same check, command pending | Same request family | **Unknown:** no validated non-idle command response schema |
+| Same check, command pending | Same request family | HTTP 200, `code="1"`, command in `data["3"]`; see below |
 
 A common cycle uploads state, receives a cursor in `data["100"]`, then polls
 using that cursor as request field `"1"`. Other connections contain only a poll.
@@ -68,7 +68,7 @@ one device, rather than an entire home. Known numbers use decimal string values.
 | `2` | Local device identifier, e.g. synthetic `C007-006` | Observed; not a model number |
 | `3` | Display label | Observed |
 | `4` | Device index | Observed; **not mode** |
-| `6` | Compact weekly schedule | Observed 336-character string; character packing, day order and value meanings unresolved; app accepts 15-minute intervals |
+| `6` | Compact weekly schedule | 336 characters; Monday first; two quarter-hours per character; [Comfort/Eco encoding](../web-api/specification.md#compact-encoding) |
 | `7` | Comfort setpoint | Observed deliberate setpoint change |
 | `8` | Frost setpoint | Strong |
 | `9` | Eco/reduced setpoint | Strong |
@@ -122,21 +122,53 @@ Local panel changes were reported upward within roughly 1–7 seconds in the
 observed transitions. That measures **panel → server reporting**, not app →
 radiator command latency, and it is not a guaranteed interval.
 
-## Downstream commands: known boundary
+## Downstream commands
 
-The Clevertouch Web API queues changes using `human/query/push/`; the panel polls
-`machine/query/check/`. They are plausibly the two ends of command delivery,
-but the actual non-idle response, command identifiers, acknowledgement mechanism,
-expiry handling and error responses have not been established in the available
-evidence. Do not fabricate a command envelope by replacing named app fields
-with numeric upload keys. A state-upload key is not automatically a writable
-command key.
+**Observed:** a queued Web API command is returned by `machine/query/check/`
+in this envelope. This is a synthetic mode-change example:
 
-Boot registration, home association, firmware transfer and other controller-facing
-endpoints are also outside the observed subset. An implementation can parse
-uploads and recognise idle replies from this document; it cannot yet replace
-the server's command-delivery side reliably.
+```json
+{
+  "code": "1",
+  "data": {
+    "100": "NEXT_CURSOR_EXAMPLE",
+    "2": "1",
+    "3": {"2": "C007-006", "22": "0", "15": "0"}
+  }
+}
+```
 
-For custom weekly schedules, the app submits named-day intervals to the server;
-see [weekly schedule submission](../web-api/specification.md#weekly-schedules).
-The server-side compact encoding is not available in the supplied app code.
+| Location | Meaning |
+| --- | --- |
+| `data["100"]` | Next opaque cursor |
+| `data["2"]` | Observed string `"1"`; count/type meaning unresolved |
+| `data["3"]` | Single observed command object |
+| Command `"2"` | Panel-local destination device ID |
+| Command `"6"` | Complete compact schedule, corresponding to Web API `programme` |
+| Command `"22"`, `"15"` | Both `"0"` in an observed Comfort command sent with `gv_mode=0,nv_mode=0` |
+
+Two schedule commands and one mode command were captured. The equal mode values
+do not distinguish which input maps to which numeric field; `"22"` is separately
+established as the active mode in uploads. Other upload keys are not thereby
+established writable command keys. Multiple-command batching is unknown.
+
+For a schedule command, replace the mode fields with `"6": "<336 characters>"`;
+the placeholder is not a valid schedule. The panel subsequently uploads the
+accepted schedule using `device/edit`. The first schedule was collected roughly
+3.7 seconds after Web API submission and echoed about 5.6 seconds later. These
+are observations, not delivery deadlines.
+
+A mode command was reflected in panel uploads before RF delivery; it reached
+the radiator in a periodic exchange about 115 seconds after panel acceptance
+in one sample. Upload echo is therefore panel acceptance, not end-to-end
+confirmation. Command IDs, explicit acknowledgements, retries, expiry and error
+responses remain unresolved.
+
+The panel runs its stored schedule and sends the active phase target/mode to the
+radiator. Schedule edits alone need not emit RF state changes. See the
+[compact schedule](../web-api/specification.md#compact-encoding) and
+[RF execution](../radiator-rf/specification.md#schedule-execution-and-command-delivery).
+
+Boot registration, home association and cursor routing remain outside this
+subset. The response format is now known for these commands, but that does not
+establish a complete replacement-server implementation.

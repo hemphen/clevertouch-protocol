@@ -17,8 +17,7 @@ and diagnostics. [Source coverage](docs/sources.md) explains the basis and limit
 of this reference.
 
 The Clevertouch Web API supports reading state and submitting commands. The clevertouch-upstream protocol's
-state upload and idle polling are documented; its downstream command envelope
-is still unknown. RF reporting, controller state frames and an inclusion
+state upload, idle polling and schedule/mode command responses are documented. RF reporting, controller state frames and an inclusion
 exchange have been observed, but a replacement transmitter has not been validated.
 
 Examples use invented identifiers and values. No account credentials, device

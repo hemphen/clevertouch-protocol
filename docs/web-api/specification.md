@@ -3,8 +3,9 @@
 [Overview](../../README.md) · [Shared values](../common.md)
 
 This is the account-facing API implemented by `hemphen/clevertouch`. Core
-operations below are **Client** evidence from that library and the supplied web
-app. This reference describes those implementations, not a live service test.
+operations below combine **Client** evidence from that library and the supplied web
+app with observed account reads and schedule/mode delivery from 26 October 2026.
+Observations describe one Purmo/LVI installation, not all providers.
 
 ## Transport and authentication
 
@@ -169,7 +170,7 @@ a timer. Those are observed client construction choices, not demonstrated
 requirements for a simple setpoint write. The Fenix branches construct some
 commands differently, so do not apply them to Purmo by analogy.
 
-After `OK_SET`, re-read the home to check state. The app's local updates and
+After `OK_SET`, re-read the home to check the panel/server state, not RF delivery. The app's local updates and
 countdown are optimistic. There is no documented command-specific transaction
 ID or end-to-end acknowledgement in this core API subset. Do not blindly retry
 a timed command after an ambiguous transport failure: it may already have run.
@@ -177,8 +178,9 @@ a timed command after an ambiguous transport failure: it may already have run.
 The operations below are **Client** evidence from the supplied app (`script.js`,
 version string 2.8.1). Requests use the Clevertouch Web API's POST/form/bearer conventions.
 Response fields listed are those consumed by the app, not complete schemas.
-These operations extend the Python client's core read/write subset and have not
-been independently exercised for this reference.
+The 26 October observations additionally cover schedule rendering, statistics,
+errors, liveness and a compact schedule queued through `query/push/`.
+Structured `apply_program/` and `copy_program/` remain Client-only evidence.
 
 The app includes a legacy body `token` on most of these requests. The table names
 it where present; its necessity alongside bearer authentication is unverified.
@@ -313,8 +315,8 @@ To retrieve the decoded week, the app posts `device_id`, `now` and, for example,
 `data.program[dayIndex]` contains `label` and a `nice` array of intervals with
 `start`, `end`, `value`, and rendering fields such as `top` and `height`.
 The editor maps indices 0–6 to Sunday–Saturday; its configurable first day of the
-week only changes display order. This does not establish the order of the compact
-string's chunks. The complete response schema is not known.
+week only changes display order. The compact string instead starts on Monday,
+as established by a controlled panel edit. The complete response schema is not known.
 
 The compact field is named `programme` in the store/queue requests. Read back
 the decoded week to compare the requested boundaries and values, and refresh
@@ -339,20 +341,51 @@ The clear-program action sends 336 zero characters through that same two-step
 path. Reusing a known encoded string is supported by the app; this is distinct
 from inventing an encoder for custom intervals.
 
-The five built-in templates each have 336 characters, all `0` or `5`. The panel's
-reported schedule is likewise a 336-character string in field `6`. There are
-48 characters per day if divided into seven equal parts, but **one character
-must not be asserted to represent one indivisible half-hour mode**: the app
-accepts quarter-hour boundaries. Two packed quarter-hour values per character
-would fit, but the packing, value mapping, day order and rounding are unverified.
-Neither supplied JavaScript file contains the server's interval-to-string codec.
-Use the structured endpoint for custom schedules rather than guessing that codec.
+### Compact encoding
 
-The clevertouch-upstream downstream command envelope and any RF transfer of a whole
-week remain unknown. Observing a schedule in a panel upload does not establish
-that the same payload can be sent back to program it.
+**Observed for Comfort/Eco:** 336 characters, seven Monday–Sunday days of
+48 characters each. Each character represents two consecutive quarter-hours.
+
+| Character | First quarter-hour | Second quarter-hour |
+| --- | --- | --- |
+| `0` | Eco | Eco |
+| `1` | Eco | Comfort |
+| `4` | Comfort | Eco |
+| `5` | Comfort | Comfort |
+
+For these four characters, encode as `4 * first + second`, with Eco = 0 and
+Comfort = 1. This is a complete Comfort/Eco subset, not evidence for other
+two-bit values or Booster encoding. Reject unsupported values rather than
+silently mapping them to Eco.
+
+Character index is `48 * day + 2 * hour + floor(minute / 30)`, where Monday
+is day 0. Within the character, minutes 00–14 or 30–44 select the first
+quarter; 15–29 or 45–59 select the second. Days use the panel's local schedule
+clock; DST transition rules are not established.
+
+A synthetic Monday with Eco only from 08:15 to 08:30 is
+`"5" * 16 + "4" + "5" * 31`. Appending `"5" * 288` gives a complete week
+with Comfort for the remaining six days. These expressions describe string
+construction, not literal values to send. An all-zero week means all Eco,
+not Off and not an absent schedule; selecting Comfort mode overrides it.
+
+A compact `query[programme]` push was observed in the next panel poll as
+command field `"6"`, followed by a panel upload of the same string.
+The panel then executed quarter-hour transitions. This establishes the compact
+queue path; it does not independently validate the structured editor endpoints.
+
+The panel executes the weekly schedule and sends phase targets/modes over RF;
+there was no whole-week transfer in the observed schedule edits. See
+[downstream commands](../clevertouch-upstream/specification.md#downstream-commands)
+and [RF scheduling](../radiator-rf/specification.md#schedule-execution-and-command-delivery).
 
 ## Delivery and liveness
+
+In one cloud Comfort-mode change, the panel uploaded the new mode before
+sending it to the radiator at its next periodic exchange, about 115 seconds
+after panel acceptance. This is one observed delay, not a timeout or guaranteed
+poll interval. Server readback is not radiator confirmation.
+
 
 | Path | Request fields | Response data / interpretation |
 | --- | --- | --- |

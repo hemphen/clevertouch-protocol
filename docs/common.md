@@ -79,6 +79,10 @@ Boost selects a timed setpoint; it need not increase heating. Switching modes
 can restore a stored setpoint. The RF active target is not a permanent Comfort
 register. Additional **Client-only** modes are listed in the Clevertouch Web API reference.
 
+The 26 October schedule experiment tracked the same 0 → 11 → 8 → 0 active-mode
+values across Web API, upstream uploads and RF. Program codes 8 and 11 are
+schedule phases, not two unrelated mode namespaces.
+
 ## Completion is layer-specific
 
 A successful Clevertouch Web API write means the server accepted the request. An HTTP

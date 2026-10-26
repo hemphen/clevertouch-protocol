@@ -2,7 +2,7 @@
 
 [Overview](../README.md)
 
-Initially compiled on 25 October 2026; schedule submission clarified on 26 October 2026. It describes a source snapshot,
+Initially compiled on 25 October 2026; schedule submission and observed delivery updated on 26 October 2026. It describes a source snapshot,
 not a promise that the provider's deployed service remains unchanged. No live
 account commands or RF transmissions were made to prepare it.
 
@@ -12,6 +12,8 @@ account commands or RF transmissions were made to prepare it.
 | Supplied `script.js`, app version string `2.8.1` | App request construction, form encoding, modes, schedules, diagnostics and statistics; static client evidence |
 | Supplied `vendor.js` | Supporting JavaScript dependencies; no additional `human/` or `machine/` endpoint definitions identified |
 | Private Touch E3 research material, source snapshot 25 October 2026 | Machine uploads and idle responses, RF frame validation, controlled mode/settings changes and observed inclusion exchange |
+
+| Private schedule experiment, 26 October 2026, reviewed source revision `0d20fd27d8b6c29e7bc969f1ce2916ae0aabec92` | Comfort/Eco quarter-hour packing and day order; three downstream commands; controller-side schedule execution and a delayed RF mode delivery |
 
 The private research was consulted to extract protocol facts, not copied as
 public evidence. Its captures, tokens, addresses, device mappings, account data,
@@ -46,8 +48,8 @@ For maintainers checking the supplied app, useful source locations are:
 | Link | Established subset | Main unresolved part |
 | --- | --- | --- |
 | Clevertouch Web API | Core library requests; additional app request/response usage | Full server validation, complete error schemas, provider-specific support |
-| clevertouch-upstream protocol | State-upload keys, success and idle envelopes, polling pattern | Non-idle command response, acknowledgements, identity/registration and error handling |
-| RF | Dual-CRC frame envelope, ordinary records, state in both directions, inclusion exchange | Custom transmission acceptance, timing/retries, control loop, schedule transfer, opaque fields |
+| clevertouch-upstream protocol | State-upload keys, success/idle/command envelopes, observed schedule and mode delivery | Batching, acknowledgements, identity/registration and error handling |
+| RF | Dual-CRC frame envelope, ordinary records, state in both directions, inclusion exchange | Custom transmission acceptance, timing/retries, control loop, loss-of-controller behaviour, opaque fields |
 
 Evidence labels apply to individual claims. A field appearing in client code is
 not by itself a controlled hardware result. Related products and inherited

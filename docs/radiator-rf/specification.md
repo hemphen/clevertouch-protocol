@@ -243,6 +243,30 @@ to 25 °C, and timer to 7200 seconds. These are **observed reset values for that
 unit**, not universal factory defaults. Panel count and wattage settings are
 separate from the four-frame exchange; their RF encoding is not established.
 
+## Schedule execution and command delivery
+
+**Observed on 26 October 2026:** the Touch E3 executes the weekly Comfort/Eco
+schedule. Panel edits and cloud-delivered schedule changes did not produce a
+whole-week RF message in the observed experiment. At phase boundaries the
+controller initiated an exchange with `request_candidate`, then sent
+`controller_state` with tag `94` containing the phase target and mode:
+8 for Auto Comfort, 11 for Auto Reduced.
+
+Quarter-hour boundaries executed 2–4 seconds after the boundary according to
+the controller's `B2` clock in this sample. The radiator receives the selected
+target and mode; a controller or external automation must execute the schedule.
+No RF schedule-upload format is established. These observations do not prove
+that every firmware lacks other schedule functionality.
+
+A cloud-requested Comfort change waited for the next radiator periodic exchange,
+about 115 seconds after panel acceptance in one sample. The panel had already
+reported the new mode to the server. Neither server readback nor a panel upload
+proves the radiator has received it.
+
+Schedule execution is distinct from thermostat regulation: these findings do
+not settle which device computes heating duty or what Auto does after controller
+loss. They do not establish a fixed heartbeat or retransmission interval.
+
 ## Sending and receiving boundaries
 
 A receiver can validate both CRCs, recognise the ordinary layouts and decode the
