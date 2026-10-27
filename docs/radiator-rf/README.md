@@ -5,8 +5,9 @@ The reference covers both directions, checksums, field encodings and inclusion.
 The controller executes schedules and sends phase targets/modes over RF.
 Custom-transmitter acceptance remains unverified.
 
-Read the [protocol specification](specification.md). See also
-[shared values](../common.md) and the [protocol overview](../../README.md).
+Read the [protocol specification](specification.md); [vectors.json](vectors.json)
+is its test data. See also [shared values](../common.md) and the
+[protocol overview](../../README.md).
 
 The research daemon for this protocol is `radiatord` in
 [clevertouch-radio](https://github.com/hemphen/clevertouch-radio/tree/main/radiatord).

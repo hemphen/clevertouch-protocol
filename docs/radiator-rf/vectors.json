@@ -1,0 +1,550 @@
+{
+  "description": "Synthetic radiator-rf frames with their decoding. Addresses are invented (controller f1010203, radiator f1040506); f1100001 is a protocol discovery candidate. Frames start at the length byte, after the AA D391 D391 sync. They test parsing and encoding, not radio acceptance.",
+  "specification": "specification.md",
+  "values": {
+    "air_temperature_C": "4B air temperature, Celsius; absent when 084C (unavailable)",
+    "target_C": "8A/94 active target, Celsius",
+    "mode": "8A/94 mode byte",
+    "heat_mode": "Name of the mode code (shared values)",
+    "temp_type": "Setpoint the mode makes active (shared values)",
+    "max_power_pct": "E1 byte 1, front-panel maximum power, percent",
+    "duty_1_pct": "E1 byte 2, candidate channel 1 duty, percent; absent if either duty byte exceeds 100",
+    "duty_2_pct": "E1 byte 3, candidate channel 2 duty, percent; absent if either duty byte exceeds 100",
+    "on_time_1_s": "DA first word, candidate channel 1 on-time, seconds",
+    "on_time_2_s": "DA second word, candidate channel 2 on-time, seconds",
+    "clock": "B2 candidate clock, HH:MM:SS; absent unless hour < 24 and minute, second < 60",
+    "tag_5b": "5B per-device value, unsigned; meaning unknown"
+  },
+  "valid": [
+    {
+      "name": "radiator_report",
+      "description": "Radiator report: Comfort, 20.0 °C air, 21.0 °C target",
+      "frame": "23f1040506c6f1010203df203000404b02a88a02ba00e100641919da000a000a0a47cd48c59d",
+      "message": "radiator_report",
+      "source": "f1040506",
+      "destination": "f1010203",
+      "radiator": "f1040506",
+      "controller": "f1010203",
+      "payload": "df203000404b02a88a02ba00e100641919da000a000a0a47",
+      "records": [
+        [
+          "df",
+          "20300040"
+        ],
+        [
+          "4b",
+          "02a8"
+        ],
+        [
+          "8a",
+          "02ba00"
+        ],
+        [
+          "e1",
+          "00641919"
+        ],
+        [
+          "da",
+          "000a000a"
+        ],
+        [
+          "0a",
+          "47"
+        ]
+      ],
+      "values": {
+        "air_temperature_C": 20.0,
+        "target_C": 21.0,
+        "mode": 0,
+        "heat_mode": "Comfort",
+        "temp_type": "comfort",
+        "max_power_pct": 100,
+        "duty_1_pct": 25,
+        "duty_2_pct": 25,
+        "on_time_1_s": 10,
+        "on_time_2_s": 10
+      }
+    },
+    {
+      "name": "controller_state",
+      "description": "Controller state: Comfort at 21.0 °C, echoed 20.0 °C, clock 12:00:00",
+      "frame": "38f1010203c6f10405064500004b02a83b004c00008e000084cc00000000972030049402ba00e100641919da000000005b0078b20c0000a20f60d9",
+      "message": "controller_state",
+      "source": "f1010203",
+      "destination": "f1040506",
+      "radiator": "f1040506",
+      "controller": "f1010203",
+      "payload": "4500004b02a83b004c00008e000084cc00000000972030049402ba00e100641919da000000005b0078b20c0000",
+      "records": [
+        [
+          "45",
+          "0000"
+        ],
+        [
+          "4b",
+          "02a8"
+        ],
+        [
+          "3b",
+          "00"
+        ],
+        [
+          "4c",
+          "0000"
+        ],
+        [
+          "8e",
+          "000084"
+        ],
+        [
+          "cc",
+          "00000000"
+        ],
+        [
+          "97",
+          "203004"
+        ],
+        [
+          "94",
+          "02ba00"
+        ],
+        [
+          "e1",
+          "00641919"
+        ],
+        [
+          "da",
+          "00000000"
+        ],
+        [
+          "5b",
+          "0078"
+        ],
+        [
+          "b2",
+          "0c0000"
+        ]
+      ],
+      "values": {
+        "air_temperature_C": 20.0,
+        "target_C": 21.0,
+        "mode": 0,
+        "heat_mode": "Comfort",
+        "temp_type": "comfort",
+        "max_power_pct": 100,
+        "duty_1_pct": 25,
+        "duty_2_pct": 25,
+        "on_time_1_s": 0,
+        "on_time_2_s": 0,
+        "tag_5b": 120,
+        "clock": "12:00:00"
+      }
+    },
+    {
+      "name": "request_candidate",
+      "description": "Controller poll that opens an exchange",
+      "frame": "0df1010203c6f10405061900a01b4377",
+      "message": "request_candidate",
+      "source": "f1010203",
+      "destination": "f1040506",
+      "radiator": "f1040506",
+      "controller": "f1010203",
+      "payload": "1900",
+      "records": [
+        [
+          "19",
+          "00"
+        ]
+      ],
+      "values": {}
+    },
+    {
+      "name": "ack_candidate",
+      "description": "Radiator acknowledgement-shaped frame",
+      "frame": "0ff1040506c6f101020301000a47e6e64d5a",
+      "message": "ack_candidate",
+      "source": "f1040506",
+      "destination": "f1010203",
+      "radiator": "f1040506",
+      "controller": "f1010203",
+      "payload": "01000a47",
+      "records": [
+        [
+          "01",
+          "00"
+        ],
+        [
+          "0a",
+          "47"
+        ]
+      ],
+      "values": {}
+    },
+    {
+      "name": "inclusion_offer",
+      "description": "Inclusion offer to a discovery candidate",
+      "frame": "0ff1010203c6f1100001000003011ff3ea1f",
+      "message": "inclusion_offer",
+      "source": "f1010203",
+      "destination": "f1100001",
+      "controller": "f1010203",
+      "candidate": "f1100001",
+      "payload": "00000301",
+      "records": null,
+      "values": {}
+    },
+    {
+      "name": "inclusion_offer_refused",
+      "description": "Inclusion offer variant seen in a refused attempt",
+      "frame": "0ff1010203c6f110000100000364dfd8ed2e",
+      "message": "inclusion_offer",
+      "source": "f1010203",
+      "destination": "f1100001",
+      "controller": "f1010203",
+      "candidate": "f1100001",
+      "payload": "00000364",
+      "records": null,
+      "values": {}
+    },
+    {
+      "name": "inclusion_reply",
+      "description": "Radiator reply to an inclusion offer",
+      "frame": "0df1040506c6f1010203000080e1d2a1",
+      "message": "inclusion_reply",
+      "source": "f1040506",
+      "destination": "f1010203",
+      "radiator": "f1040506",
+      "controller": "f1010203",
+      "payload": "0000",
+      "records": [],
+      "values": {}
+    },
+    {
+      "name": "inclusion_bind",
+      "description": "Controller binding the replying radiator",
+      "frame": "0df1010203c6f10405060100aa1b1f72",
+      "message": "inclusion_bind",
+      "source": "f1010203",
+      "destination": "f1040506",
+      "radiator": "f1040506",
+      "controller": "f1010203",
+      "payload": "0100",
+      "records": [
+        [
+          "01",
+          "00"
+        ]
+      ],
+      "values": {}
+    },
+    {
+      "name": "report_program_eco",
+      "description": "Radiator report: Program in its Eco phase, 15.5 °C target",
+      "frame": "23f1040506c6f1010203df203000404b02a88a02570be100641919da000a000a0a473a2e119e",
+      "message": "radiator_report",
+      "source": "f1040506",
+      "destination": "f1010203",
+      "radiator": "f1040506",
+      "controller": "f1010203",
+      "payload": "df203000404b02a88a02570be100641919da000a000a0a47",
+      "records": [
+        [
+          "df",
+          "20300040"
+        ],
+        [
+          "4b",
+          "02a8"
+        ],
+        [
+          "8a",
+          "02570b"
+        ],
+        [
+          "e1",
+          "00641919"
+        ],
+        [
+          "da",
+          "000a000a"
+        ],
+        [
+          "0a",
+          "47"
+        ]
+      ],
+      "values": {
+        "air_temperature_C": 20.0,
+        "target_C": 15.5,
+        "mode": 11,
+        "heat_mode": "Program",
+        "temp_type": "eco",
+        "max_power_pct": 100,
+        "duty_1_pct": 25,
+        "duty_2_pct": 25,
+        "on_time_1_s": 10,
+        "on_time_2_s": 10
+      }
+    },
+    {
+      "name": "state_off",
+      "description": "Controller state: Off, target raw 320 (0 °C)",
+      "frame": "38f1010203c6f10405064500004b02a83b004c00008e000084cc000000009720300494014001e100641919da000000005b0078b20c00005f0c60cb",
+      "message": "controller_state",
+      "source": "f1010203",
+      "destination": "f1040506",
+      "radiator": "f1040506",
+      "controller": "f1010203",
+      "payload": "4500004b02a83b004c00008e000084cc000000009720300494014001e100641919da000000005b0078b20c0000",
+      "records": [
+        [
+          "45",
+          "0000"
+        ],
+        [
+          "4b",
+          "02a8"
+        ],
+        [
+          "3b",
+          "00"
+        ],
+        [
+          "4c",
+          "0000"
+        ],
+        [
+          "8e",
+          "000084"
+        ],
+        [
+          "cc",
+          "00000000"
+        ],
+        [
+          "97",
+          "203004"
+        ],
+        [
+          "94",
+          "014001"
+        ],
+        [
+          "e1",
+          "00641919"
+        ],
+        [
+          "da",
+          "00000000"
+        ],
+        [
+          "5b",
+          "0078"
+        ],
+        [
+          "b2",
+          "0c0000"
+        ]
+      ],
+      "values": {
+        "air_temperature_C": 20.0,
+        "target_C": 0.0,
+        "mode": 1,
+        "heat_mode": "Off",
+        "temp_type": "none",
+        "max_power_pct": 100,
+        "duty_1_pct": 25,
+        "duty_2_pct": 25,
+        "on_time_1_s": 0,
+        "on_time_2_s": 0,
+        "tag_5b": 120,
+        "clock": "12:00:00"
+      }
+    },
+    {
+      "name": "report_unavailable_temperature",
+      "description": "Radiator report with the unavailable air temperature 084C",
+      "frame": "23f1040506c6f1010203df203000404b084c8a02ba00e100641919da000a000a0a47e5a57804",
+      "message": "radiator_report",
+      "source": "f1040506",
+      "destination": "f1010203",
+      "radiator": "f1040506",
+      "controller": "f1010203",
+      "payload": "df203000404b084c8a02ba00e100641919da000a000a0a47",
+      "records": [
+        [
+          "df",
+          "20300040"
+        ],
+        [
+          "4b",
+          "084c"
+        ],
+        [
+          "8a",
+          "02ba00"
+        ],
+        [
+          "e1",
+          "00641919"
+        ],
+        [
+          "da",
+          "000a000a"
+        ],
+        [
+          "0a",
+          "47"
+        ]
+      ],
+      "values": {
+        "target_C": 21.0,
+        "mode": 0,
+        "heat_mode": "Comfort",
+        "temp_type": "comfort",
+        "max_power_pct": 100,
+        "duty_1_pct": 25,
+        "duty_2_pct": 25,
+        "on_time_1_s": 10,
+        "on_time_2_s": 10
+      }
+    },
+    {
+      "name": "report_front_panel_limit",
+      "description": "Radiator report: 55 % front-panel limit, duty above 100 kept raw",
+      "frame": "23f1040506c6f1010203df203000404b02a88a02ba00e1003737ffda000a000a0a4765c5de89",
+      "message": "radiator_report",
+      "source": "f1040506",
+      "destination": "f1010203",
+      "radiator": "f1040506",
+      "controller": "f1010203",
+      "payload": "df203000404b02a88a02ba00e1003737ffda000a000a0a47",
+      "records": [
+        [
+          "df",
+          "20300040"
+        ],
+        [
+          "4b",
+          "02a8"
+        ],
+        [
+          "8a",
+          "02ba00"
+        ],
+        [
+          "e1",
+          "003737ff"
+        ],
+        [
+          "da",
+          "000a000a"
+        ],
+        [
+          "0a",
+          "47"
+        ]
+      ],
+      "values": {
+        "air_temperature_C": 20.0,
+        "target_C": 21.0,
+        "mode": 0,
+        "heat_mode": "Comfort",
+        "temp_type": "comfort",
+        "max_power_pct": 55,
+        "on_time_1_s": 10,
+        "on_time_2_s": 10
+      }
+    },
+    {
+      "name": "report_unknown_record",
+      "description": "Radiator report with an unrecognised record, skipped by its length",
+      "frame": "28f1040506c6f1010203df203000404b02a88a02ba00e100641919da000a000a0a47f01234567801515099",
+      "message": "radiator_report",
+      "source": "f1040506",
+      "destination": "f1010203",
+      "radiator": "f1040506",
+      "controller": "f1010203",
+      "payload": "df203000404b02a88a02ba00e100641919da000a000a0a47f012345678",
+      "records": [
+        [
+          "df",
+          "20300040"
+        ],
+        [
+          "4b",
+          "02a8"
+        ],
+        [
+          "8a",
+          "02ba00"
+        ],
+        [
+          "e1",
+          "00641919"
+        ],
+        [
+          "da",
+          "000a000a"
+        ],
+        [
+          "0a",
+          "47"
+        ],
+        [
+          "f0",
+          "12345678"
+        ]
+      ],
+      "values": {
+        "air_temperature_C": 20.0,
+        "target_C": 21.0,
+        "mode": 0,
+        "heat_mode": "Comfort",
+        "temp_type": "comfort",
+        "max_power_pct": 100,
+        "duty_1_pct": 25,
+        "duty_2_pct": 25,
+        "on_time_1_s": 10,
+        "on_time_2_s": 10
+      }
+    },
+    {
+      "name": "unparseable_payload",
+      "description": "Intact envelope whose payload is not a record stream",
+      "frame": "0df1010203c6f1040506ff00ea7b061f",
+      "message": "unknown",
+      "source": "f1010203",
+      "destination": "f1040506",
+      "payload": "ff00",
+      "records": null,
+      "values": {}
+    }
+  ],
+  "invalid": [
+    {
+      "name": "inner_crc",
+      "description": "One payload bit flipped",
+      "frame": "23f1040506c6f1010203df203100404b02a88a02ba00e100641919da000a000a0a47cd48c59d",
+      "error": "inner_crc"
+    },
+    {
+      "name": "outer_crc",
+      "description": "Last outer CRC bit flipped",
+      "frame": "23f1040506c6f1010203df203000404b02a88a02ba00e100641919da000a000a0a47cd48c59c",
+      "error": "outer_crc"
+    },
+    {
+      "name": "marker",
+      "description": "C7 instead of C6, both CRCs recomputed",
+      "frame": "23f1040506c7f1010203df203000404b02a88a02ba00e100641919da000a000a0a470d49c586",
+      "error": "marker"
+    },
+    {
+      "name": "too_short",
+      "description": "LEN below the 11-byte minimum",
+      "frame": "0af1040506c6f1010203",
+      "error": "length"
+    }
+  ]
+}

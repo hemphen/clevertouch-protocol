@@ -311,6 +311,11 @@ The following examples use invented controller `F1010203` and radiator
 with both CRC algorithms. They test parsing/encoding only, not radio acceptance.
 Discovery destination `F1100001` is a protocol candidate value, not a private ID.
 
+[vectors.json](vectors.json) holds these and further cases as test data: each
+frame with its payload, records, roles and decoded values in the terms of this
+specification, and frames a receiver must reject, with the reason. They were
+cross-checked with a second, independent decoder.
+
 | Message | Complete frame, starting at length | Bytes |
 | --- | --- | ---: |
 | Radiator report | `23F1040506C6F1010203DF203000404B02A88A02BA00E100641919DA000A000A0A47CD48C59D` | 38 |
