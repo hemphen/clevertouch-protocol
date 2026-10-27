@@ -65,23 +65,28 @@ The following values agree between the app client's `gv_mode`, controller upload
 and RF `8A`/`94` **for the observed radiator profile**. This does not make every
 mode in the wider web app valid on every radiator.
 
-| Decimal | Meaning | Active temperature | RF evidence |
-| ---: | --- | --- | --- |
-| 0 | Comfort | Comfort setpoint | Observed |
-| 1 | Off | RF target observed as raw 320 | Observed |
-| 2 | Frost / anti-freeze | Frost setpoint | Observed |
-| 3 | Eco / reduced | Eco setpoint | Observed |
-| 4 | Boost / timer | Boost setpoint | Observed |
-| 8 | Program, Comfort phase | Comfort setpoint | Observed |
-| 11 | Program, Eco phase | Eco setpoint | Observed at a schedule transition |
+Each code has one name pair: `heat_mode` and `temp_type`, the `HeatMode` and
+`TempType` values of the [hemphen/clevertouch](https://github.com/hemphen/clevertouch)
+client. Implementations report them next to the code; `temp_type` names the
+stored setpoint the mode makes active.
+
+| Code | `heat_mode` | `temp_type` | Active temperature | RF evidence |
+| ---: | --- | --- | --- | --- |
+| 0 | Comfort | comfort | Comfort setpoint | Observed |
+| 1 | Off | none | RF target raw 320 | Observed |
+| 2 | Frost | frost | Frost setpoint | Observed |
+| 3 | Eco | eco | Eco setpoint | Observed |
+| 4 | Boost | boost | Boost setpoint, for a timed period | Observed |
+| 8 | Program | comfort | Comfort setpoint | Observed |
+| 11 | Program | eco | Eco setpoint | Observed |
+
+Program runs the weekly schedule; the panel calls it Auto. Codes 8 and 11 are
+its Comfort and Eco phases in the same namespace as the other modes: an active
+mode moves 0 → 11 → 8 → 0 identically on all three links (**Observed**).
 
 Boost selects a timed setpoint; it need not increase heating. Switching modes
 can restore a stored setpoint. The RF active target is not a permanent Comfort
 register. Additional **Client-only** modes are listed in the Clevertouch Web API reference.
-
-The 26 October schedule experiment tracked the same 0 → 11 → 8 → 0 active-mode
-values across Web API, upstream uploads and RF. Program codes 8 and 11 are
-schedule phases, not two unrelated mode namespaces.
 
 ## Completion is layer-specific
 

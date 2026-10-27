@@ -91,6 +91,29 @@ Lengths include both CRCs in the total column. Tags are listed in on-wire order.
 | `ack_candidate` | Radiator → controller | `0F` hex / 15 | 18 | `01 0A` |
 | `request_candidate` | Controller → radiator | `0D` hex / 13 | 16 | `19` |
 
+### Message types
+
+A frame's type follows from its payload's shape, never from its addresses or
+its length alone. The first matching rule applies:
+
+| Payload | Message | Source |
+| --- | --- | --- |
+| Not a record stream, beginning `00 00` | `inclusion_offer` | Controller; the destination is a discovery candidate |
+| Not a record stream otherwise | `unknown`, bytes preserved | Not inferred |
+| Records including `DF` | `radiator_report` | Radiator |
+| Records including `45` | `controller_state` | Controller |
+| A single `01` record | `inclusion_bind` | Controller |
+| Records beginning `01` | `ack_candidate` | Radiator |
+| Records beginning `19` | `request_candidate` | Controller |
+| All zero | `inclusion_reply` | Radiator |
+| Anything else | `unknown` | Not inferred |
+
+The other address is the counterpart: the radiator of a controller frame and
+the controller of a radiator frame. "Not a record stream" means the
+[record grammar](#record-grammar) fails: a record overruns the payload, or a
+nonzero byte follows tag `00`. Such a frame is kept with its bytes when both
+CRCs pass.
+
 `radiator_report` supplies measured temperature and current state.
 `controller_state` carries a target/mode and controller-side state; panel-driven
 changes were observed in this direction. Its reported temperature is an echo,
@@ -213,12 +236,12 @@ removed from the controller's device list. A factory-fresh device and a custom
 transmitter have not been tested. The four-byte addressing and dual-CRC envelope
 remain the same; the payload grammar differs.
 
-| Step | Direction | `L` | Payload only | Interpretation |
-| --- | --- | ---: | --- | --- |
-| Offer | Controller → candidate address | 15 | `00 00 03 01` | Inclusion offer, opaque fixed-layout payload |
-| Reply | Radiator → controller | 13 | `00 00` | Empty ordinary record stream / padding |
-| Bind | Controller → replying radiator | 13 | `01 00` | Single tag `01` with value zero |
-| Ack | Radiator → controller | 15 | `01 00 0A 47` | Same shape as ordinary ack candidate |
+| Step | Message | Direction | `L` | Payload only | Interpretation |
+| --- | --- | --- | ---: | --- | --- |
+| Offer | `inclusion_offer` | Controller → candidate address | 15 | `00 00 03 01` | Opaque fixed-layout payload, outside the record grammar |
+| Reply | `inclusion_reply` | Radiator → controller | 13 | `00 00` | Empty ordinary record stream / padding |
+| Bind | `inclusion_bind` | Controller → replying radiator | 13 | `01 00` | Single tag `01` with value zero |
+| Ack | `ack_candidate` | Radiator → controller | 15 | `01 00 0A 47` | Same shape as the ordinary acknowledgement |
 
 The controller swept candidate destinations `F1 10 00 01`, `D0 00 00 02`,
 `F1 10 00 03`. These are observed discovery values, **not installed device IDs**.
