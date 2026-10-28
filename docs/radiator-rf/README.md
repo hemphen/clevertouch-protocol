@@ -9,5 +9,5 @@ Read the [protocol specification](specification.md); [vectors.json](vectors.json
 is its test data. See also [shared values](../common.md) and the
 [protocol overview](../../README.md).
 
-The research daemon for this protocol is `radiatord` in
-[clevertouch-radio](https://github.com/hemphen/clevertouch-radio/tree/main/radiatord).
+[radiator-rf](https://github.com/hemphen/radiator-rf) is a Python library that
+receives and sends this protocol.

@@ -4,8 +4,8 @@
 
 This is the account-facing API implemented by `hemphen/clevertouch`. Core
 operations below combine **Client** evidence from that library and the supplied web
-app with observed account reads and schedule/mode delivery from 26 October 2026.
-Observations describe one Purmo/LVI installation, not all providers.
+app with observed account reads and schedule and mode delivery. Observations
+describe one Purmo/LVI installation; other providers may differ.
 
 ## Transport and authentication
 
@@ -178,8 +178,8 @@ a timed command after an ambiguous transport failure: it may already have run.
 The operations below are **Client** evidence from the supplied app (`script.js`,
 version string 2.8.1). Requests use the Clevertouch Web API's POST/form/bearer conventions.
 Response fields listed are those consumed by the app, not complete schemas.
-The 26 October observations additionally cover schedule rendering, statistics,
-errors, liveness and a compact schedule queued through `query/push/`.
+Observations additionally cover schedule rendering, statistics, errors,
+liveness and a compact schedule queued through `query/push/`.
 Structured `apply_program/` and `copy_program/` remain Client-only evidence.
 
 The app includes a legacy body `token` on most of these requests. The table names
@@ -375,16 +375,16 @@ The panel then executed quarter-hour transitions. This establishes the compact
 queue path; it does not independently validate the structured editor endpoints.
 
 The panel executes the weekly schedule and sends phase targets/modes over RF;
-there was no whole-week transfer in the observed schedule edits. See
+schedule edits produce no whole-week RF transfer. See
 [downstream commands](../clevertouch-upstream/specification.md#downstream-commands)
 and [RF scheduling](../radiator-rf/specification.md#schedule-execution-and-command-delivery).
 
 ## Delivery and liveness
 
-In one cloud Comfort-mode change, the panel uploaded the new mode before
-sending it to the radiator at its next periodic exchange, about 115 seconds
-after panel acceptance. This is one observed delay, not a timeout or guaranteed
-poll interval. Server readback is not radiator confirmation.
+**Observed:** the panel reports a cloud mode change to the server before the
+radiator has it; the radiator receives it at its next periodic exchange, 115
+seconds later in one delivery. Server readback is therefore not radiator
+confirmation.
 
 
 | Path | Request fields | Response data / interpretation |

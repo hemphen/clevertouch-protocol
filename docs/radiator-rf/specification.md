@@ -10,23 +10,21 @@ strings or vendor terminology.
 
 ## Physical layer
 
-| Parameter | Observed / working receiver value |
+| Parameter | Value |
 | --- | --- |
-| Centre frequency | 868.3 MHz; inherited setting that successfully receives these frames |
+| Centre frequency | 868.3 MHz |
 | Modulation / coding | 2-FSK / PCM |
-| Symbol duration | Approximately 27 µs, about 37 kbit/s; best of tested receiver slicer settings |
-| Deviation | Approximately ±16–18 kHz from IQ analysis |
-| Working synchronisation pattern | Hex `AA D3 91 D3 91` |
-| Receiver reset/gap threshold | 1000 µs in the working decoder; not a measured transmit requirement |
+| Symbol duration | 27 µs, about 37 kbit/s |
+| Deviation | About ±17 kHz (16–18 kHz measured) |
+| Preamble and sync | Alternating-bit preamble (`AA` bytes), then the sync word `D3 91` twice |
+| Receiver gap threshold | 1000 µs |
 
-The 27 µs value improves validated frame recovery over the earlier 26 µs receiver
-setting. It is not a precise hardware baud-rate measurement or a validated
-CC1101 register profile. The listed pattern is the receiver's synchronisation
-match, not a complete specification of preamble length. Post-sync data is
-represented bytewise below, with bits read most-significant first by the receiver.
-The recovered bytes validate directly under both CRCs; no additional whitening
-step is needed for that decoded representation. Transmit timing tolerances,
-frequency tolerance, repetition policy and channel-access rules are unknown.
+27 µs is the receiver symbol setting that recovers the most valid frames, not
+a hardware baud-rate measurement or a CC1101 register profile. Receivers match
+`AA D3 91 D3 91`; the preamble's full length is unknown. Post-sync data is
+represented bytewise below, most significant bit first, and validates under
+both CRCs without whitening. The gap threshold is a receiver setting. Transmit
+timing tolerances, frequency tolerance and channel-access rules are unknown.
 
 ## Frame envelope
 
@@ -81,7 +79,8 @@ use invented addresses and are not valid discovery targets for real equipment.
 
 ## Ordinary traffic
 
-These four shapes were invariant within the examined ordinary-traffic samples.
+Ordinary traffic has four fixed shapes: every observed frame of each type had
+exactly this length and record order.
 Lengths include both CRCs in the total column. Tags are listed in on-wire order.
 
 | Message | Direction | `L` | Total | Record order |
@@ -124,8 +123,24 @@ control loop runs.
 The short frames contain `01=00, 0A=47` and `19=00`, respectively. Their names
 are **tentative**: no sequence number, result code or acknowledged-command ID
 has been identified in them. Do not infer success from their presence alone.
-Controller state/request frames were concentrated around activity in the sampled
-sessions; no universal idle heartbeat or retry interval is established.
+
+### Exchanges
+
+**Observed:** traffic comes in short exchanges between the controller and one
+radiator, of two kinds.
+
+| Exchange | Opened by | Frames | When |
+| --- | --- | --- | --- |
+| Periodic | Radiator | `radiator_report`, `controller_state`, `ack_candidate`, `radiator_report` | On a per-radiator cycle of about 2.5–4 minutes |
+| Controller-initiated | Controller | `request_candidate`, `radiator_report`, `controller_state`, `ack_candidate`, repeated two or three times | When the radiator's menu is opened or its mode changed at the panel, and at schedule phase boundaries |
+
+`controller_state` is part of every periodic exchange; between changes it
+repeats the radiator's own values back with the controller's clock. A radiator answered `request_candidate` within
+0.35 seconds, and the controller sent its next `request_candidate` 0.2–0.7
+seconds after a `controller_state`. A `request_candidate` was not always
+followed by a received report, and the controller then sent `controller_state`
+regardless. In a periodic exchange the first report carries the interval's
+`DA` and the second reports zero. Retry rules are unknown.
 
 ### Record grammar
 
@@ -157,7 +172,7 @@ Multi-byte numeric words below are big-endian unless explicitly stated.
 | `8A` | 3 | Report | `[target:uint16][mode:uint8]`, active target and mode | Observed |
 | `94` | 3 | State | Same layout, controller-side target and mode | Observed with panel changes |
 | `E1` | 4 | Report, state | `[00][front maximum %][channel 1 duty?][channel 2 duty?]` | Maximum confirmed; duty scaling tentative |
-| `DA` | 4 | Report, state | Two uint16 candidate interval on-times in seconds | Tentative; zero in sampled controller states |
+| `DA` | 4 | Report, state | Two uint16 candidate interval on-times in seconds | Tentative; zero in every observed controller state |
 | `B2` | 3 | State | Binary hour, minute, second | Strong; time zone/date unknown |
 | `5B` | 2 | State | Slowly varying per-device uint16 | Unknown; not identified as watts or energy |
 | `97` | 3 | State | Opaque controller state/configuration word | Unknown |
@@ -170,7 +185,7 @@ Multi-byte numeric words below are big-endian unless explicitly stated.
 | `8E` | 3 | State | `00 00 84` | Unknown; do not import floor-thermostat semantics |
 | `CC` | 4 | State | `00 00 00 00` | Unknown |
 
-Constant values describe the sample, not guaranteed constants across models.
+Constant values are the observed ones, not guaranteed across models.
 Tag `5E` is implemented as a second temperature in related Watts decoders but
 was not observed on this equipment. It is not part of the established inventory.
 
@@ -220,9 +235,10 @@ gives a configured rating, but its division across panels is unresolved.
 
 `DF` values include `00/20` in byte 0, `30/31` in byte 1, `00/01` in byte 2,
 and `40` in byte 3. The `30→31` change persisted after heating demand returned
-to zero; it must not be labelled a simple heating-active bit. `97` values showed
-byte 0 matching `DF` byte 0, byte 1 `30`, and byte 2 `04` or `05`. No bit-level
-meaning is established.
+to zero; it must not be labelled a simple heating-active bit. In `97`, byte 0
+equals byte 0 of the radiator's preceding `DF` (**Observed**, every recorded
+controller frame), byte 1 is `30`, and byte 2 is `04` or `05` without a known
+rule. No bit-level meaning is established.
 
 `5B` varies both between devices and slightly over time. Changing a configured
 wattage did not change it. `B2` is consistent with a binary clock: require
@@ -251,14 +267,12 @@ retry policy and stopping rules are unknown.
 
 One refused/already-installed attempt used offer payload `00 00 03 64` instead
 of `00 00 03 01`. The final byte's meaning is unknown; it is not established as
-a mode, count or error code. Replies followed offers in the observed inclusion
-window; this does not prove that unsolicited discovery never occurs.
+a mode, count or error code. Replies were seen only after offers.
 
-The exchange took about three seconds with roughly one-second gaps. Those are
-observations, not transmit deadlines. Re-inclusion produced identical handshake
-bytes on two attempts, with no visible changing challenge or counter. That does
-not establish replay acceptance, absence of hidden state, or acceptance of an
-arbitrary controller identity.
+The exchange takes about three seconds, with roughly one-second gaps. Repeated
+inclusion produced identical bytes, with no visible challenge or counter;
+whether a replayed exchange or a foreign controller identity is accepted is
+untested.
 
 Re-inclusion reset the tested radiator's stored values to Comfort 19 °C,
 Frost 7 °C, Eco 15.5 °C, both unresolved controller upload temperature fields `10`/`11`
@@ -268,41 +282,58 @@ separate from the four-frame exchange; their RF encoding is not established.
 
 ## Schedule execution and command delivery
 
-**Observed on 26 October 2026:** the Touch E3 executes the weekly Comfort/Eco
-schedule. Panel edits and cloud-delivered schedule changes did not produce a
-whole-week RF message in the observed experiment. At phase boundaries the
-controller initiated an exchange with `request_candidate`, then sent
-`controller_state` with tag `94` containing the phase target and mode:
-8 for Auto Comfort, 11 for Auto Reduced.
+**Observed:** the Touch E3 executes the weekly Comfort/Eco schedule. Editing a
+schedule, at the panel or through the cloud, sends nothing over RF. At each
+phase boundary the controller opens an exchange and sends `controller_state`
+whose `94` carries the phase's target and mode: 8 (Program, comfort) or 11
+(Program, eco). It does so 2–4 seconds after the quarter-hour by its `B2`
+clock. The radiator receives only the resulting target and mode, so whatever
+replaces the controller must run the schedule itself. No RF schedule format is
+known.
 
-Quarter-hour boundaries executed 2–4 seconds after the boundary according to
-the controller's `B2` clock in this sample. The radiator receives the selected
-target and mode; a controller or external automation must execute the schedule.
-No RF schedule-upload format is established. These observations do not prove
-that every firmware lacks other schedule functionality.
+A mode change requested through the cloud reaches the radiator at its next
+periodic exchange, not at once (**Observed**: 115 seconds after the panel
+accepted it, in one delivery). The panel reports the new mode to the server
+before that, so neither server readback nor a panel upload shows that the
+radiator has it.
 
-A cloud-requested Comfort change waited for the next radiator periodic exchange,
-about 115 seconds after panel acceptance in one sample. The panel had already
-reported the new mode to the server. Neither server readback nor a panel upload
-proves the radiator has received it.
-
-Schedule execution is distinct from thermostat regulation: these findings do
-not settle which device computes heating duty or what Auto does after controller
-loss. They do not establish a fixed heartbeat or retransmission interval.
+Which device computes heating duty, and what a radiator in Program does without
+its controller, are unknown.
 
 ## Sending and receiving boundaries
 
-A receiver can validate both CRCs, recognise the ordinary layouts and decode the
-established fields above. Preserve unfamiliar but CRC-valid payloads as unknown
-message types rather than discarding them as noise.
+A receiver validates both CRCs, recognises the message types above and decodes
+the established fields. It keeps unfamiliar but CRC-valid payloads as unknown
+messages rather than discarding them as noise.
 
-A transmitter can construct a structurally valid envelope from this reference,
-but successful control is **not validated**. In particular, do not assume that
-changing only `94` in a recorded state frame is sufficient: the role of opaque
-state fields, control-loop responsibility, exchange timing and retry behaviour
-remain open. No RF schedule upload format is known. Observe later radiator
-reports to establish an applied target/mode; neither a valid CRC nor a short
-ack-shaped frame alone proves command success.
+### Constructing controller state
+
+No rule produces the opaque fields (`45`, `3B`, `4C`, `8E`, `CC`, `97` bytes 1–2,
+`5B`) for a given radiator, so a `controller_state` is built from one the
+controller sent to that radiator earlier. **Observed** in every recorded
+controller frame:
+
+| Record | Content |
+| --- | --- |
+| `4B`, `E1` | Copied from the radiator's report earlier in the same exchange (119 of 119 such exchanges) |
+| `94` | The target and mode; Off carries raw 320 |
+| `DA` | Zero (502 of 502) |
+| `97` byte 0 | Byte 0 of that report's `DF` (502 of 502) |
+| `B2` | The controller's clock |
+| Others | Unchanged from the earlier frame |
+
+Built this way from the controller's previous frame to the same radiator, 107
+of 128 recorded controller frames are reproduced exactly; the rest differ only
+in `97` byte 2 (`04` against `05`).
+
+A transmitter can build every message from this reference, but control by
+anything other than the radiator's own controller is **not validated**:
+acceptance of another controller identity, timing tolerance and behaviour
+after controller loss remain open. No RF schedule format is known. Confirm a
+command by a later radiator report carrying the new mode and target; neither a
+valid CRC nor an acknowledgement-shaped frame shows success. A report can show
+the target one raw unit (1/18 °C) below the value sent: 11 times, against 239
+exact matches.
 
 ## Synthetic frame examples
 

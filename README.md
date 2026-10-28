@@ -13,12 +13,13 @@ errors; uncertain fields are marked where they are described.
 
 Start with [shared values and identifiers](docs/common.md). The Clevertouch Web API
 specification includes [weekly schedule submission](docs/web-api/specification.md#weekly-schedules)
-and diagnostics. [Source coverage](docs/sources.md) explains the basis and limits
-of this reference.
+and diagnostics; the radiator-rf reference has [test vectors](docs/radiator-rf/vectors.json).
+[Source coverage](docs/sources.md) explains the basis and limits of this reference.
 
 The Clevertouch Web API supports reading state and submitting commands. The clevertouch-upstream protocol's
-state upload, idle polling and schedule/mode command responses are documented. RF reporting, controller state frames and an inclusion
-exchange have been observed, but a replacement transmitter has not been validated.
+state upload, idle polling and schedule/mode command responses are documented. RF reporting,
+controller state, its construction and the inclusion exchange have been observed, but a replacement
+transmitter has not been validated.
 
 Examples use invented identifiers and values. No account credentials, device
 identities, household captures or investigation logs are included. Public service

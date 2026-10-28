@@ -2,24 +2,25 @@
 
 [Overview](../README.md)
 
-Initially compiled on 25 October 2026; schedule submission and observed delivery updated on 26 October 2026. It describes a source snapshot,
-not a promise that the provider's deployed service remains unchanged. No live
-account commands or RF transmissions were made to prepare it.
+Compiled in October 2026 from three sources. It describes the provider's
+service as it was then, not a promise that the deployed service stays
+unchanged.
 
 | Source | What it establishes |
 | --- | --- |
 | [hemphen/clevertouch](https://github.com/hemphen/clevertouch/tree/252274f52b5deab81d5d986300f53fb41511ea44), revision `252274f52b5deab81d5d986300f53fb41511ea44` | Implemented Clevertouch Web API authentication, read/write requests, device fields, modes and temperature conversion |
-| Supplied `script.js`, app version string `2.8.1` | App request construction, form encoding, modes, schedules, diagnostics and statistics; static client evidence |
-| Supplied `vendor.js` | Supporting JavaScript dependencies; no additional `human/` or `machine/` endpoint definitions identified |
-| Private Touch E3 research material, source snapshot 25 October 2026 | Machine uploads and idle responses, RF frame validation, controlled mode/settings changes and observed inclusion exchange |
+| The provider's web app: `script.js` (version string `2.8.1`) and `vendor.js` | App request construction, form encoding, modes, schedules, diagnostics and statistics; static client evidence. `vendor.js` defines no further `human/` or `machine/` endpoints |
+| Controlled observation of one Touch E3 installation | Controller uploads, idle and command responses; RF frames in both directions, their exchanges and timing; controller-state construction; deliberate mode, setting, inclusion and schedule changes; schedule packing and execution |
 
-| Private schedule experiment, 26 October 2026, reviewed source revision `0d20fd27d8b6c29e7bc969f1ce2916ae0aabec92` | Comfort/Eco quarter-hour packing and day order; three downstream commands; controller-side schedule execution and a delayed RF mode delivery |
+The observation recorded the panel's upstream traffic and its radio traffic
+while changes were made at the panel, in the web app and through supervised
+Web API schedule and mode commands. No RF was transmitted. Counts such as "119
+of 119" refer to those recordings. The recordings themselves are not published,
+nor are their addresses, device mappings, account data, location or household
+activity; what they show is stated here as protocol facts with
+[evidence labels](common.md#evidence-labels).
 
-The private research was consulted to extract protocol facts, not copied as
-public evidence. Its captures, tokens, addresses, device mappings, account data,
-locations and household activity remain outside this repository. Original app
-bundles are also not redistributed here. The following hashes identify the
-supplied files without publishing their contents:
+The app bundles are not redistributed. These hashes identify them:
 
 | File | SHA-256 |
 | --- | --- |
@@ -49,7 +50,7 @@ For maintainers checking the supplied app, useful source locations are:
 | --- | --- | --- |
 | Clevertouch Web API | Core library requests; additional app request/response usage | Full server validation, complete error schemas, provider-specific support |
 | clevertouch-upstream protocol | State-upload keys, success/idle/command envelopes, observed schedule and mode delivery | Batching, acknowledgements, identity/registration and error handling |
-| RF | Dual-CRC frame envelope, ordinary records, state in both directions, inclusion exchange | Custom transmission acceptance, timing/retries, control loop, loss-of-controller behaviour, opaque fields |
+| RF | Dual-CRC frame envelope, message types, ordinary records, state in both directions, exchanges, controller-state construction, inclusion | Custom transmission acceptance, timing tolerance and retries, control loop, loss-of-controller behaviour, opaque fields |
 
 Evidence labels apply to individual claims. A field appearing in client code is
 not by itself a controlled hardware result. Related products and inherited

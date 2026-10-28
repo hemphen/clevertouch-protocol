@@ -7,6 +7,3 @@ responses are documented. Endpoint paths retain the provider’s
 
 Read the [protocol specification](specification.md). See also
 [shared values](../common.md) and the [protocol overview](../../README.md).
-
-The research daemon for this protocol is `clevertouched` in
-[clevertouch-radio](https://github.com/hemphen/clevertouch-radio/tree/main/clevertouched).

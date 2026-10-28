@@ -28,9 +28,8 @@ Host: e3.lvi.eu
 User-Agent: Mozilla/5.0 SmartHome
 ```
 
-The panel was observed re-resolving the hostname on most connection cycles.
-Polls occurred roughly every 5–15 seconds. These are observed client behaviours,
-not mandatory DNS, timeout or retry rules.
+**Observed:** the panel polls every 5–15 seconds and re-resolves the hostname
+on most connection cycles; neither is a known requirement.
 
 ## Messages in each direction
 
@@ -118,9 +117,8 @@ may be cached; it is not by itself proof of current radio liveness. Bit `0x2000`
 of field `34` is useful supporting evidence for an unavailable reading, not a
 complete documented device-health model.
 
-Local panel changes were reported upward within roughly 1–7 seconds in the
-observed transitions. That measures **panel → server reporting**, not app →
-radiator command latency, and it is not a guaranteed interval.
+The panel reports local changes upward within seconds (1–7 seconds observed).
+That is **panel → server reporting**, not command latency.
 
 ## Downstream commands
 
@@ -147,28 +145,26 @@ in this envelope. This is a synthetic mode-change example:
 | Command `"6"` | Complete compact schedule, corresponding to Web API `programme` |
 | Command `"22"`, `"15"` | Both `"0"` in an observed Comfort command sent with `gv_mode=0,nv_mode=0` |
 
-Two schedule commands and one mode command were captured. The equal mode values
-do not distinguish which input maps to which numeric field; `"22"` is separately
-established as the active mode in uploads. Other upload keys are not thereby
-established writable command keys. Multiple-command batching is unknown.
+**Observed:** schedule commands (`"6"`) and a mode command (`"22"`, `"15"`). The
+mode command carried `"0"` in both fields for a request sent with
+`gv_mode=0,nv_mode=0`, so which Web API field maps to which key is open; `"22"`
+is the active mode in uploads. Other upload keys are not known to be writable,
+and batching of several commands is unknown.
 
 For a schedule command, replace the mode fields with `"6": "<336 characters>"`;
-the placeholder is not a valid schedule. The panel subsequently uploads the
-accepted schedule using `device/edit`. The first schedule was collected roughly
-3.7 seconds after Web API submission and echoed about 5.6 seconds later. These
-are observations, not delivery deadlines.
+the placeholder is not a valid schedule. The panel collects a queued command
+at its next poll, seconds after Web API submission, and uploads the accepted
+schedule with `device/edit` seconds later.
 
-A mode command was reflected in panel uploads before RF delivery; it reached
-the radiator in a periodic exchange about 115 seconds after panel acceptance
-in one sample. Upload echo is therefore panel acceptance, not end-to-end
-confirmation. Command IDs, explicit acknowledgements, retries, expiry and error
-responses remain unresolved.
+An upload echo shows that the panel accepted a command, not that a radiator has
+it: a mode command reaches the radiator at its next periodic exchange
+([RF delivery](../radiator-rf/specification.md#schedule-execution-and-command-delivery)).
+Command IDs, acknowledgements, retries, expiry and error responses are unknown.
 
 The panel runs its stored schedule and sends the active phase target/mode to the
 radiator. Schedule edits alone need not emit RF state changes. See the
 [compact schedule](../web-api/specification.md#compact-encoding) and
 [RF execution](../radiator-rf/specification.md#schedule-execution-and-command-delivery).
 
-Boot registration, home association and cursor routing remain outside this
-subset. The response format is now known for these commands, but that does not
-establish a complete replacement-server implementation.
+Boot registration, home association and cursor routing are not covered, so
+these messages are not enough for a replacement server.
