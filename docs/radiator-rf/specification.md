@@ -288,20 +288,22 @@ separate from the four-frame exchange; their RF encoding is not established.
 
 ## Schedule execution and command delivery
 
-**Observed:** the Touch E3 executes the weekly Comfort/Eco schedule. Editing a
-schedule, at the panel or through the cloud, sends nothing over RF. At each
-phase boundary the controller opens an exchange and sends `controller_state`
-whose `94` carries the phase's target and mode: 8 (Program, comfort) or 11
-(Program, eco). It does so 2–4 seconds after the quarter-hour by its `B2`
-clock. The radiator receives only the resulting target and mode, so whatever
-replaces the controller must run the schedule itself. No RF schedule format is
-known.
+**Observed** in one installation: the Touch E3 executes the weekly
+Comfort/Eco schedule. The tested schedule edits, at the panel and through the
+cloud, produced no whole-week or other schedule transfer over RF. At each
+phase boundary the controller opened an exchange and sent `controller_state`
+whose `94` carried the phase's target and mode: 8 (Program, comfort) or 11
+(Program, eco). It did so 2–4 seconds after the quarter-hour by its `B2`
+clock. The radiator was seen to receive only the resulting target and mode,
+and no RF schedule format is known, so whatever replaces the controller has to
+run the schedule itself.
 
-A mode change requested through the cloud reaches the radiator at its next
-periodic exchange, not at once (**Observed**: 115 seconds after the panel
-accepted it, in one delivery). The panel reports the new mode to the server
-before that, so neither server readback nor a panel upload shows that the
-radiator has it.
+In the one tested delivery, a mode change requested through the cloud reached
+the radiator at its next periodic exchange, 115 seconds after the panel
+accepted it, not at once (**Observed**). Whether delivery always waits for
+that exchange is untested. The panel reported the new mode to the server
+before the radiator had it, so neither server readback nor a panel upload
+shows that the radiator has it.
 
 Which device computes heating duty, and what a radiator in Program does without
 its controller, are unknown.

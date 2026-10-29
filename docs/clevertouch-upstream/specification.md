@@ -157,7 +157,8 @@ at its next poll, seconds after Web API submission, and uploads the accepted
 schedule with `device/edit` seconds later.
 
 An upload echo shows that the panel accepted a command, not that a radiator has
-it: a mode command reaches the radiator at its next periodic exchange
+it: in the one tested delivery, a mode command reached the radiator at its next
+periodic exchange
 ([RF delivery](../radiator-rf/specification.md#schedule-execution-and-command-delivery)).
 Command IDs, acknowledgements, retries, expiry and error responses are unknown.
 

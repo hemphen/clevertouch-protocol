@@ -375,16 +375,16 @@ The panel then executed quarter-hour transitions. This establishes the compact
 queue path; it does not independently validate the structured editor endpoints.
 
 The panel executes the weekly schedule and sends phase targets/modes over RF;
-schedule edits produce no whole-week RF transfer. See
+the tested schedule edits produced no whole-week RF transfer. See
 [downstream commands](../clevertouch-upstream/specification.md#downstream-commands)
 and [RF scheduling](../radiator-rf/specification.md#schedule-execution-and-command-delivery).
 
 ## Delivery and liveness
 
-**Observed:** the panel reports a cloud mode change to the server before the
-radiator has it; the radiator receives it at its next periodic exchange, 115
-seconds later in one delivery. Server readback is therefore not radiator
-confirmation.
+**Observed:** the panel reported a cloud mode change to the server before the
+radiator had it. In the one tested delivery, the radiator received it at its
+next periodic exchange, 115 seconds later. Server readback is therefore not
+radiator confirmation.
 
 
 | Path | Request fields | Response data / interpretation |
