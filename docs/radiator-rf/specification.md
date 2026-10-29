@@ -87,8 +87,8 @@ Lengths include both CRCs in the total column. Tags are listed in on-wire order.
 | --- | --- | ---: | ---: | --- |
 | `radiator_report` | Radiator → controller | `23` hex / 35 | 38 | `DF 4B 8A E1 DA 0A` |
 | `controller_state` | Controller → radiator | `38` hex / 56 | 59 | `45 4B 3B 4C 8E CC 97 94 E1 DA 5B B2` |
-| `ack_candidate` | Radiator → controller | `0F` hex / 15 | 18 | `01 0A` |
-| `request_candidate` | Controller → radiator | `0D` hex / 13 | 16 | `19` |
+| `ack` | Radiator → controller | `0F` hex / 15 | 18 | `01 0A` |
+| `request` | Controller → radiator | `0D` hex / 13 | 16 | `19` |
 
 ### Message types
 
@@ -99,8 +99,8 @@ length alone. Only the observed shapes are messages:
 | --- | --- | --- |
 | Records `DF 4B 8A E1 DA 0A`, in that order | `radiator_report` | Radiator |
 | Records `45 4B 3B 4C 8E CC 97 94 E1 DA 5B B2`, in that order | `controller_state` | Controller |
-| `19 00` | `request_candidate` | Controller |
-| `01 00 0A 47` | `ack_candidate` | Radiator |
+| `19 00` | `request` | Controller |
+| `01 00 0A 47` | `ack` | Radiator |
 | `01 00` | `inclusion_bind` | Controller |
 | `00 00 03 01` or `00 00 03 64` | `inclusion_offer` | Controller; the destination is a discovery candidate |
 | `00 00` | `inclusion_reply` | Radiator |
@@ -127,8 +127,10 @@ but sparse radiator reporting prevents a firm conclusion about where the
 control loop runs.
 
 The short frames contain `01=00, 0A=47` and `19=00`, respectively. Their names
-are **tentative**: no sequence number, result code or acknowledged-command ID
-has been identified in them. Do not infer success from their presence alone.
+say where they occur, which is observed: `request` opens a controller-initiated
+exchange and `ack` closes an exchange. No sequence number, result code or
+acknowledged-command ID has been identified in them, so do not infer success
+from their presence alone.
 
 ### Exchanges
 
@@ -137,13 +139,13 @@ radiator, of two kinds.
 
 | Exchange | Opened by | Frames | When |
 | --- | --- | --- | --- |
-| Periodic | Radiator | `radiator_report`, `controller_state`, `ack_candidate`, `radiator_report` | On a per-radiator cycle of about 2.5–4 minutes |
-| Controller-initiated | Controller | `request_candidate`, `radiator_report`, `controller_state`, `ack_candidate`, repeated two or three times | When the radiator's menu is opened or its mode changed at the panel, and at schedule phase boundaries |
+| Periodic | Radiator | `radiator_report`, `controller_state`, `ack`, `radiator_report` | On a per-radiator cycle of about 2.5–4 minutes |
+| Controller-initiated | Controller | `request`, `radiator_report`, `controller_state`, `ack`, repeated two or three times | When the radiator's menu is opened or its mode changed at the panel, and at schedule phase boundaries |
 
 `controller_state` is part of every periodic exchange; between changes it
-repeats the radiator's own values back with the controller's clock. A radiator answered `request_candidate` within
-0.35 seconds, and the controller sent its next `request_candidate` 0.2–0.7
-seconds after a `controller_state`. A `request_candidate` was not always
+repeats the radiator's own values back with the controller's clock. A radiator answered `request` within
+0.35 seconds, and the controller sent its next `request` 0.2–0.7
+seconds after a `controller_state`. A `request` was not always
 followed by a received report, and the controller then sent `controller_state`
 regardless. In a periodic exchange the first report carries the interval's
 `DA` and the second reports zero. Retry rules are unknown.
@@ -177,8 +179,8 @@ Multi-byte numeric words below are big-endian unless explicitly stated.
 | `4B` | 2 | Report, state | Air temperature, uint16 | Strong; agrees with controller upload field `16` |
 | `8A` | 3 | Report | `[target:uint16][mode:uint8]`, active target and mode | Observed |
 | `94` | 3 | State | Same layout, controller-side target and mode | Observed with panel changes |
-| `E1` | 4 | Report, state | `[00][front maximum %][channel 1 duty?][channel 2 duty?]` | Maximum confirmed; duty scaling tentative |
-| `DA` | 4 | Report, state | Two uint16 candidate interval on-times in seconds | Tentative; zero in every observed controller state |
+| `E1` | 4 | Report, state | `[00][front maximum %][duty of rated power %][duty of limited power %]` | Maximum confirmed; the duties' relation observed; uncalibrated |
+| `DA` | 4 | Report, state | Two uint16 interval on-times in seconds, one for each duty | Tentative; zero in every observed controller state |
 | `B2` | 3 | State | Binary hour, minute, second | Strong; time zone/date unknown |
 | `5B` | 2 | State | Slowly varying per-device uint16 | Unknown; not identified as watts or energy |
 | `97` | 3 | State | Opaque controller state/configuration word | Unknown |
@@ -211,31 +213,43 @@ that the stored Comfort setting has been overwritten.
 | ---: | --- |
 | 0 | Observed zero; meaning unknown |
 | 1 | Configured maximum power rate of the front panel, percent |
-| 2 | Candidate channel 1 duty, front panel |
-| 3 | Candidate channel 2 duty |
+| 2 | Duty as a share of rated power, percent |
+| 3 | Duty as a share of the limited power, percent |
 
-Selecting a 55% front-panel limit changed byte 1 from 100 to 55 and capped
-channel 1 at 55 while channel 2 remained at 100. This establishes independent
-channels and the front-panel association. Duty values also respond to heating
-demand, but electrical output has not been calibrated against them. If a duty
-byte exceeds 100, retain it as raw data rather than clamping it into a percentage.
+Byte 2 is byte 3 scaled by byte 1 (**Observed**). At a 100 % limit the two were
+equal in all 484 distinct recorded frames. Selecting a 55 % front-panel limit
+changed byte 1 from 100 to 55, and byte 2 then followed 0.55 × byte 3 to within
+rounding in 97 of 99 frames at that limit, from two radiators, with byte 3 at
+zero, from 33 to 53, and at 100. The other two were sent as the limit changed
+and still carried 100 in both bytes.
+Neither rounding nor truncation of 0.55 × byte 3 gives every byte 2, so both are
+probably derived from a finer internal value. The recorded radiators have one
+panel each, so the bytes are one heating element's duty against its rating and
+against the limit, not two panels (**Strong**). Duty values also respond to
+heating demand, but electrical output has not been calibrated against them. If
+a duty byte exceeds 100, retain it as raw data rather than clamping it into a
+percentage.
 
-`DA` contains two candidate per-channel interval counters. Values return to zero
-within exchanges and are not monotonic lifetime totals. A recurring sequence is
-report with nonzero `DA` → controller state with zero `DA` → ack-shaped frame →
-report with zero `DA`. The precise reset trigger and the mapping of `DA` words
-to physical panels are unknown. Never sum repeated reports as independent energy.
+`DA` contains two interval on-times in seconds. Values return to zero within
+exchanges and are not monotonic lifetime totals. A recurring sequence is report
+with nonzero `DA` → controller state with zero `DA` → `ack` → report with zero
+`DA`. At 100 % the two words differed by at most 2 seconds in 52 reports. At the 55 % limit
+the first word averaged 0.54 of the second over 35 reports, varying from 0.38 to
+0.66 between them: the words follow `E1` bytes 2 and 3 but are counted
+separately. The precise reset trigger is unknown. Never sum repeated reports as
+independent energy.
 
-If the duty/on-time interpretation and channel ratings were independently
-verified, estimates would be:
+If the duty/on-time interpretation were independently verified, a single-panel
+radiator's estimates would be:
 
 ```text
-power_W = (P1_W * duty1_pct + P2_W * duty2_pct) / 100
-interval_Wh = (P1_W * on_time1_s + P2_W * on_time2_s) / 3600
+power_W = rated_W * duty_1_pct / 100
+interval_Wh = rated_W * on_time_1_s / 3600
 ```
 
-These are conditional estimates, not measured consumption. Controller upload field `23`
-gives a configured rating, but its division across panels is unresolved.
+`rated_W` is the configured rating, controller upload field `23`. These are
+conditional estimates, not measured consumption. Radiators with more than one
+panel were not observed.
 
 ### Opaque state and clock fields
 
@@ -263,7 +277,7 @@ remain the same; the payload grammar differs.
 | Offer | `inclusion_offer` | Controller → candidate address | 15 | `00 00 03 01` | Opaque fixed-layout payload, outside the record grammar |
 | Reply | `inclusion_reply` | Radiator → controller | 13 | `00 00` | Empty ordinary record stream / padding |
 | Bind | `inclusion_bind` | Controller → replying radiator | 13 | `01 00` | Single tag `01` with value zero |
-| Ack | `ack_candidate` | Radiator → controller | 15 | `01 00 0A 47` | Same shape as the ordinary acknowledgement |
+| Ack | `ack` | Radiator → controller | 15 | `01 00 0A 47` | Same shape as the ordinary acknowledgement |
 
 The controller swept candidate destinations `F1 10 00 01`, `D0 00 00 02`,
 `F1 10 00 03`. These are observed discovery values, **not installed device IDs**.
@@ -292,8 +306,8 @@ separate from the four-frame exchange; their RF encoding is not established.
 Comfort/Eco schedule. The tested schedule edits, at the panel and through the
 cloud, produced no whole-week or other schedule transfer over RF. At each
 phase boundary the controller opened an exchange and sent `controller_state`
-whose `94` carried the phase's target and mode: 8 (Program, comfort) or 11
-(Program, eco). It did so 2–4 seconds after the quarter-hour by its `B2`
+whose `94` carried the phase's target and mode: 8 (`program`, `comfort`) or 11
+(`program`, `eco`). It did so 2–4 seconds after the quarter-hour by its `B2`
 clock. The radiator was seen to receive only the resulting target and mode,
 and no RF schedule format is known, so whatever replaces the controller has to
 run the schedule itself.
@@ -339,7 +353,7 @@ anything other than the radiator's own controller is **not validated**:
 acceptance of another controller identity, timing tolerance and behaviour
 after controller loss remain open. No RF schedule format is known. Confirm a
 command by a later radiator report carrying the new mode and target; neither a
-valid CRC nor an acknowledgement-shaped frame shows success. A report can show
+valid CRC nor an `ack` shows success. A report can show
 the target one raw unit (1/18 °C) below the value sent: 11 times, against 239
 exact matches.
 
@@ -361,8 +375,8 @@ cross-checked with a second, independent decoder.
 | --- | --- | ---: |
 | Radiator report | `23F1040506C6F1010203DF203000404B02A88A02BA00E100641919DA000A000A0A47CD48C59D` | 38 |
 | Controller state | `38F1010203C6F10405064500004B02A83B004C00008E000084CC00000000972030049402BA00E100641919DA000000005B0078B20C0000A20F60D9` | 59 |
-| Request candidate | `0DF1010203C6F10405061900A01B4377` | 16 |
-| Ack candidate | `0FF1040506C6F101020301000A47E6E64D5A` | 18 |
+| Request | `0DF1010203C6F10405061900A01B4377` | 16 |
+| Ack | `0FF1040506C6F101020301000A47E6E64D5A` | 18 |
 | Inclusion offer | `0FF1010203C6F1100001000003011FF3EA1F` | 18 |
 | Inclusion reply | `0DF1040506C6F1010203000080E1D2A1` | 16 |
 | Inclusion bind | `0DF1010203C6F10405060100AA1B1F72` | 16 |

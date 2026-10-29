@@ -2,18 +2,18 @@
   "description": "Synthetic radiator-rf frames with their decoding. Addresses are invented (controller f1010203, radiator f1040506); f1100001 is a protocol discovery candidate. Frames start at the length byte, after the AA D391 D391 sync. Valid frames have an intact envelope; those of no known message are unknown, with no roles or values. Each invalid frame breaks one check. They test parsing and encoding, not radio acceptance.",
   "specification": "specification.md",
   "values": {
-    "air_temperature_C": "4B air temperature, Celsius; absent when 084C (unavailable)",
-    "target_C": "8A/94 active target, Celsius",
-    "mode": "8A/94 mode byte",
-    "heat_mode": "Name of the mode code (shared values)",
+    "temperature_C": "4B air temperature, Celsius; absent when 084C (unavailable)",
+    "setpoint_C": "8A/94 active setpoint, Celsius",
+    "mode_raw": "8A/94 mode byte",
+    "heat_mode": "Name of the mode code, lowercase (shared values)",
     "temp_type": "Setpoint the mode makes active (shared values)",
-    "max_power_pct": "E1 byte 1, front-panel maximum power, percent",
-    "duty_1_pct": "E1 byte 2, candidate channel 1 duty, percent; absent if either duty byte exceeds 100",
-    "duty_2_pct": "E1 byte 3, candidate channel 2 duty, percent; absent if either duty byte exceeds 100",
-    "on_time_1_s": "DA first word, candidate channel 1 on-time, seconds",
-    "on_time_2_s": "DA second word, candidate channel 2 on-time, seconds",
-    "clock": "B2 candidate clock, HH:MM:SS; absent unless hour < 24 and minute, second < 60",
-    "tag_5b": "5B per-device value, unsigned; meaning unknown"
+    "max_power_pct": "E1 byte 1, the front panel's configured maximum power, percent",
+    "duty_1_pct": "E1 byte 2, duty as a share of rated power, percent; absent if either duty byte exceeds 100",
+    "duty_2_pct": "E1 byte 3, duty as a share of the limited power, percent; duty_1_pct is it scaled by max_power_pct; absent if either duty byte exceeds 100",
+    "on_time_1_s": "DA first word, on-time in seconds, following duty_1_pct",
+    "on_time_2_s": "DA second word, on-time in seconds, following duty_2_pct",
+    "clock": "B2 controller clock, HH:MM:SS; absent unless hour < 24 and minute, second < 60",
+    "device_value_5b_raw": "5B per-device value, unsigned; meaning unknown"
   },
   "valid": [
     {
@@ -53,10 +53,10 @@
         ]
       ],
       "values": {
-        "air_temperature_C": 20.0,
-        "target_C": 21.0,
-        "mode": 0,
-        "heat_mode": "Comfort",
+        "temperature_C": 20.0,
+        "setpoint_C": 21.0,
+        "mode_raw": 0,
+        "heat_mode": "comfort",
         "temp_type": "comfort",
         "max_power_pct": 100,
         "duty_1_pct": 25,
@@ -126,25 +126,25 @@
         ]
       ],
       "values": {
-        "air_temperature_C": 20.0,
-        "target_C": 21.0,
-        "mode": 0,
-        "heat_mode": "Comfort",
+        "temperature_C": 20.0,
+        "setpoint_C": 21.0,
+        "mode_raw": 0,
+        "heat_mode": "comfort",
         "temp_type": "comfort",
         "max_power_pct": 100,
         "duty_1_pct": 25,
         "duty_2_pct": 25,
         "on_time_1_s": 0,
         "on_time_2_s": 0,
-        "tag_5b": 120,
+        "device_value_5b_raw": 120,
         "clock": "12:00:00"
       }
     },
     {
-      "name": "request_candidate",
-      "description": "Controller poll that opens an exchange",
+      "name": "request",
+      "description": "Controller request that opens an exchange",
       "frame": "0df1010203c6f10405061900a01b4377",
-      "message": "request_candidate",
+      "message": "request",
       "source": "f1010203",
       "destination": "f1040506",
       "radiator": "f1040506",
@@ -159,10 +159,10 @@
       "values": {}
     },
     {
-      "name": "ack_candidate",
-      "description": "Radiator acknowledgement-shaped frame",
+      "name": "ack",
+      "description": "Radiator acknowledgement that closes an exchange; it carries no result",
       "frame": "0ff1040506c6f101020301000a47e6e64d5a",
-      "message": "ack_candidate",
+      "message": "ack",
       "source": "f1040506",
       "destination": "f1010203",
       "radiator": "f1040506",
@@ -274,10 +274,10 @@
         ]
       ],
       "values": {
-        "air_temperature_C": 20.0,
-        "target_C": 15.5,
-        "mode": 11,
-        "heat_mode": "Program",
+        "temperature_C": 20.0,
+        "setpoint_C": 15.5,
+        "mode_raw": 11,
+        "heat_mode": "program",
         "temp_type": "eco",
         "max_power_pct": 100,
         "duty_1_pct": 25,
@@ -347,17 +347,17 @@
         ]
       ],
       "values": {
-        "air_temperature_C": 20.0,
-        "target_C": 0.0,
-        "mode": 1,
-        "heat_mode": "Off",
+        "temperature_C": 20.0,
+        "setpoint_C": 0.0,
+        "mode_raw": 1,
+        "heat_mode": "off",
         "temp_type": "none",
         "max_power_pct": 100,
         "duty_1_pct": 25,
         "duty_2_pct": 25,
         "on_time_1_s": 0,
         "on_time_2_s": 0,
-        "tag_5b": 120,
+        "device_value_5b_raw": 120,
         "clock": "12:00:00"
       }
     },
@@ -398,13 +398,62 @@
         ]
       ],
       "values": {
-        "target_C": 21.0,
-        "mode": 0,
-        "heat_mode": "Comfort",
+        "setpoint_C": 21.0,
+        "mode_raw": 0,
+        "heat_mode": "comfort",
         "temp_type": "comfort",
         "max_power_pct": 100,
         "duty_1_pct": 25,
         "duty_2_pct": 25,
+        "on_time_1_s": 10,
+        "on_time_2_s": 10
+      }
+    },
+    {
+      "name": "report_limited_duty",
+      "description": "Radiator report at a 55 % front-panel limit: duty 22 % of rated power, 40 % of the limited power",
+      "frame": "23f1040506c6f1010203df203000404b02a88a02ba00e100371628da000a000a0a47bd2e1f7e",
+      "message": "radiator_report",
+      "source": "f1040506",
+      "destination": "f1010203",
+      "radiator": "f1040506",
+      "controller": "f1010203",
+      "payload": "df203000404b02a88a02ba00e100371628da000a000a0a47",
+      "records": [
+        [
+          "df",
+          "20300040"
+        ],
+        [
+          "4b",
+          "02a8"
+        ],
+        [
+          "8a",
+          "02ba00"
+        ],
+        [
+          "e1",
+          "00371628"
+        ],
+        [
+          "da",
+          "000a000a"
+        ],
+        [
+          "0a",
+          "47"
+        ]
+      ],
+      "values": {
+        "temperature_C": 20.0,
+        "setpoint_C": 21.0,
+        "mode_raw": 0,
+        "heat_mode": "comfort",
+        "temp_type": "comfort",
+        "max_power_pct": 55,
+        "duty_1_pct": 22,
+        "duty_2_pct": 40,
         "on_time_1_s": 10,
         "on_time_2_s": 10
       }
@@ -446,10 +495,10 @@
         ]
       ],
       "values": {
-        "air_temperature_C": 20.0,
-        "target_C": 21.0,
-        "mode": 0,
-        "heat_mode": "Comfort",
+        "temperature_C": 20.0,
+        "setpoint_C": 21.0,
+        "mode_raw": 0,
+        "heat_mode": "comfort",
         "temp_type": "comfort",
         "max_power_pct": 55,
         "on_time_1_s": 10,

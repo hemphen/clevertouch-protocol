@@ -65,20 +65,21 @@ The following values agree between the app client's `gv_mode`, controller upload
 and RF `8A`/`94` **for the observed radiator profile**. This does not make every
 mode in the wider web app valid on every radiator.
 
-Each code has one name pair: `heat_mode` and `temp_type`, the `HeatMode` and
-`TempType` values of the [hemphen/clevertouch](https://github.com/hemphen/clevertouch)
-client. Implementations report them next to the code; `temp_type` names the
-stored setpoint the mode makes active.
+Each code has one name pair, `heat_mode` and `temp_type`, both lowercase. They
+are the `HeatMode` and `TempType` enums of the
+[hemphen/clevertouch](https://github.com/hemphen/clevertouch) client, which
+spells `HeatMode` values capitalised (`Comfort`). Implementations report them
+next to the code; `temp_type` names the stored setpoint the mode makes active.
 
 | Code | `heat_mode` | `temp_type` | Active temperature | RF evidence |
 | ---: | --- | --- | --- | --- |
-| 0 | Comfort | comfort | Comfort setpoint | Observed |
-| 1 | Off | none | RF target raw 320 | Observed |
-| 2 | Frost | frost | Frost setpoint | Observed |
-| 3 | Eco | eco | Eco setpoint | Observed |
-| 4 | Boost | boost | Boost setpoint, for a timed period | Observed |
-| 8 | Program | comfort | Comfort setpoint | Observed |
-| 11 | Program | eco | Eco setpoint | Observed |
+| 0 | `comfort` | `comfort` | Comfort setpoint | Observed |
+| 1 | `off` | `none` | RF target raw 320 | Observed |
+| 2 | `frost` | `frost` | Frost setpoint | Observed |
+| 3 | `eco` | `eco` | Eco setpoint | Observed |
+| 4 | `boost` | `boost` | Boost setpoint, for a timed period | Observed |
+| 8 | `program` | `comfort` | Comfort setpoint | Observed |
+| 11 | `program` | `eco` | Eco setpoint | Observed |
 
 Program runs the weekly schedule; the panel calls it Auto. Codes 8 and 11 are
 its Comfort and Eco phases in the same namespace as the other modes: an active
@@ -94,4 +95,4 @@ A successful Clevertouch Web API write means the server accepted the request. An
 response to a controller upload means the server answered the panel. Valid RF CRCs
 mean a frame is intact. None of these alone proves that a radiator applied a
 command. Read back device state; a subsequent radiator report provides stronger
-confirmation than an optimistic app update or an acknowledgement-shaped frame.
+confirmation than an optimistic app update or an RF `ack`.
