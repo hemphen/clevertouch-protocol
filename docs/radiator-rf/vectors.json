@@ -2,8 +2,8 @@
   "description": "Synthetic radiator-rf frames with their decoding. Addresses are invented (controller f1010203, radiator f1040506); f1100001 is a protocol discovery candidate. Frames start at the length byte, after the AA D391 D391 sync. Valid frames have an intact envelope; those of no known message are unknown, with no roles or values. Each invalid frame breaks one check. They test parsing and encoding, not radio acceptance.",
   "specification": "specification.md",
   "values": {
-    "temperature_C": "4B air temperature, Celsius; absent when 084C (unavailable)",
-    "setpoint_C": "8A/94 active setpoint, Celsius",
+    "temperature_F": "4B air temperature, degrees Fahrenheit: the raw word / 10, exactly; absent when 084C (unavailable)",
+    "setpoint_F": "8A/94 active setpoint, degrees Fahrenheit: the raw word / 10, exactly",
     "mode_raw": "8A/94 mode byte",
     "heat_mode": "Name of the mode code, lowercase (shared values)",
     "temp_type": "Setpoint the mode makes active (shared values)",
@@ -18,7 +18,7 @@
   "valid": [
     {
       "name": "radiator_report",
-      "description": "Radiator report: Comfort, 20.0 °C air, 21.0 °C target",
+      "description": "Radiator report: Comfort, 68.0 °F (20 °C) air, 69.8 °F (21 °C) target",
       "frame": "23f1040506c6f1010203df203000404b02a88a02ba00e100641919da000a000a0a47cd48c59d",
       "message": "radiator_report",
       "source": "f1040506",
@@ -53,8 +53,8 @@
         ]
       ],
       "values": {
-        "temperature_C": 20.0,
-        "setpoint_C": 21.0,
+        "temperature_F": 68.0,
+        "setpoint_F": 69.8,
         "mode_raw": 0,
         "heat_mode": "comfort",
         "temp_type": "comfort",
@@ -67,7 +67,7 @@
     },
     {
       "name": "controller_state",
-      "description": "Controller state: Comfort at 21.0 °C, echoed 20.0 °C, clock 12:00:00",
+      "description": "Controller state: Comfort at 69.8 °F (21 °C), echoed 68.0 °F (20 °C), clock 12:00:00",
       "frame": "38f1010203c6f10405064500004b02a83b004c00008e000084cc00000000972030049402ba00e100641919da000000005b0078b20c0000a20f60d9",
       "message": "controller_state",
       "source": "f1010203",
@@ -126,8 +126,8 @@
         ]
       ],
       "values": {
-        "temperature_C": 20.0,
-        "setpoint_C": 21.0,
+        "temperature_F": 68.0,
+        "setpoint_F": 69.8,
         "mode_raw": 0,
         "heat_mode": "comfort",
         "temp_type": "comfort",
@@ -239,7 +239,7 @@
     },
     {
       "name": "report_program_eco",
-      "description": "Radiator report: Program in its Eco phase, 15.5 °C target",
+      "description": "Radiator report: Program in its Eco phase, 59.9 °F (15.5 °C) target",
       "frame": "23f1040506c6f1010203df203000404b02a88a02570be100641919da000a000a0a473a2e119e",
       "message": "radiator_report",
       "source": "f1040506",
@@ -274,8 +274,8 @@
         ]
       ],
       "values": {
-        "temperature_C": 20.0,
-        "setpoint_C": 15.5,
+        "temperature_F": 68.0,
+        "setpoint_F": 59.9,
         "mode_raw": 11,
         "heat_mode": "program",
         "temp_type": "eco",
@@ -288,7 +288,7 @@
     },
     {
       "name": "state_off",
-      "description": "Controller state: Off, target raw 320 (0 °C)",
+      "description": "Controller state: Off, target raw 320 (32.0 °F, 0 °C)",
       "frame": "38f1010203c6f10405064500004b02a83b004c00008e000084cc000000009720300494014001e100641919da000000005b0078b20c00005f0c60cb",
       "message": "controller_state",
       "source": "f1010203",
@@ -347,8 +347,8 @@
         ]
       ],
       "values": {
-        "temperature_C": 20.0,
-        "setpoint_C": 0.0,
+        "temperature_F": 68.0,
+        "setpoint_F": 32.0,
         "mode_raw": 1,
         "heat_mode": "off",
         "temp_type": "none",
@@ -398,7 +398,7 @@
         ]
       ],
       "values": {
-        "setpoint_C": 21.0,
+        "setpoint_F": 69.8,
         "mode_raw": 0,
         "heat_mode": "comfort",
         "temp_type": "comfort",
@@ -446,8 +446,8 @@
         ]
       ],
       "values": {
-        "temperature_C": 20.0,
-        "setpoint_C": 21.0,
+        "temperature_F": 68.0,
+        "setpoint_F": 69.8,
         "mode_raw": 0,
         "heat_mode": "comfort",
         "temp_type": "comfort",
@@ -495,8 +495,8 @@
         ]
       ],
       "values": {
-        "temperature_C": 20.0,
-        "setpoint_C": 21.0,
+        "temperature_F": 68.0,
+        "setpoint_F": 69.8,
         "mode_raw": 0,
         "heat_mode": "comfort",
         "temp_type": "comfort",

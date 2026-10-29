@@ -199,7 +199,11 @@ was not observed on this equipment. It is not part of the established inventory.
 
 ### Temperature and mode (`4B`, `8A`, `94`)
 
-Use `(raw - 320) / 18` °C; `084C` means unavailable. Mode is the final byte of
+The word is tenths of a degree Fahrenheit: `raw / 10` °F exactly, or
+`(raw - 320) / 18` °C; `084C` means unavailable. Decoders report the exact
+Fahrenheit value (`temperature_F`, `setpoint_F` in the
+[vectors](vectors.json)), as rtl_433 does for native units, and leave Celsius
+to the consumer. Mode is the final byte of
 `8A`/`94`, with values in the [common mode table](../common.md#heating-modes).
 Examples: `8A 02 A8 00` reports Comfort at 20 °C; `94 01 40 01` carries Off
 with a 0 °C target. Changing to Eco changes the active target without proving

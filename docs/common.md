@@ -54,6 +54,10 @@ raw = round(18 * C + 320)
 
 RF words are unsigned big-endian. HTTP numeric values commonly arrive as decimal
 strings. Preserve unavailable values separately from valid zero temperatures.
+Fahrenheit is the wire's unit, so `raw / 10` °F is exact while Celsius values
+rarely terminate (a measured `637` is 17.611… °C). Settings, by contrast, follow
+a Celsius grid: setpoints move in 0.5 °C steps of 9 raw units, and the observed
+reset values are whole or half degrees Celsius.
 The app's rounding and special handling of zero are UI implementation details,
 not a different temperature scale. Its `param_c_f` selects `c` or `f` for display.
 Do not apply this temperature formula to every numeric field: controller upload `"23"`,
