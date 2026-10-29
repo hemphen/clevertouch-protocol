@@ -92,26 +92,32 @@ Lengths include both CRCs in the total column. Tags are listed in on-wire order.
 
 ### Message types
 
-A frame's type follows from its payload's shape, never from its addresses or
-its length alone. The first matching rule applies:
+A frame's type follows from its whole payload, never from its addresses or its
+length alone. Only the observed shapes are messages:
 
 | Payload | Message | Source |
 | --- | --- | --- |
-| Not a record stream, beginning `00 00` | `inclusion_offer` | Controller; the destination is a discovery candidate |
-| Not a record stream otherwise | `unknown`, bytes preserved | Not inferred |
-| Records including `DF` | `radiator_report` | Radiator |
-| Records including `45` | `controller_state` | Controller |
-| A single `01` record | `inclusion_bind` | Controller |
-| Records beginning `01` | `ack_candidate` | Radiator |
-| Records beginning `19` | `request_candidate` | Controller |
-| All zero | `inclusion_reply` | Radiator |
+| Records `DF 4B 8A E1 DA 0A`, in that order | `radiator_report` | Radiator |
+| Records `45 4B 3B 4C 8E CC 97 94 E1 DA 5B B2`, in that order | `controller_state` | Controller |
+| `19 00` | `request_candidate` | Controller |
+| `01 00 0A 47` | `ack_candidate` | Radiator |
+| `01 00` | `inclusion_bind` | Controller |
+| `00 00 03 01` or `00 00 03 64` | `inclusion_offer` | Controller; the destination is a discovery candidate |
+| `00 00` | `inclusion_reply` | Radiator |
 | Anything else | `unknown` | Not inferred |
 
+The record layouts must fill the payload exactly, with no terminator or
+padding; the other payloads match byte for byte. Anything else is `unknown`:
+a partial or reordered layout, an extra or repeated record, a short frame with
+other values, a lookalike offer. An `unknown` frame keeps its records, or its
+payload bytes when they are not a record stream, but has no roles and no
+decoded values. Every recognised layout has each tag once, so no value can be
+contradicted by a second record.
+
 The other address is the counterpart: the radiator of a controller frame and
-the controller of a radiator frame. "Not a record stream" means the
+the controller of a radiator frame. A payload is not a record stream when the
 [record grammar](#record-grammar) fails: a record overruns the payload, or a
-nonzero byte follows tag `00`. Such a frame is kept with its bytes when both
-CRCs pass.
+nonzero byte follows tag `00`. The offers are such payloads.
 
 `radiator_report` supplies measured temperature and current state.
 `controller_state` carries a target/mode and controller-side state; panel-driven
@@ -304,7 +310,7 @@ its controller, are unknown.
 
 A receiver validates both CRCs, recognises the message types above and decodes
 the established fields. It keeps unfamiliar but CRC-valid payloads as unknown
-messages rather than discarding them as noise.
+messages rather than discarding them as noise, without roles or values.
 
 ### Constructing controller state
 
@@ -344,7 +350,9 @@ Discovery destination `F1100001` is a protocol candidate value, not a private ID
 
 [vectors.json](vectors.json) holds these and further cases as test data: each
 frame with its payload, records, roles and decoded values in the terms of this
-specification, and frames a receiver must reject, with the reason. They were
+specification; intact frames of no known message, which a receiver keeps as
+`unknown`; and frames a receiver must reject, each breaking exactly one check,
+with the reason. Every vector at one of the four observed frame lengths was
 cross-checked with a second, independent decoder.
 
 | Message | Complete frame, starting at length | Bytes |

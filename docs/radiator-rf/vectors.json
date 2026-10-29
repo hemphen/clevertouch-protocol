@@ -1,5 +1,5 @@
 {
-  "description": "Synthetic radiator-rf frames with their decoding. Addresses are invented (controller f1010203, radiator f1040506); f1100001 is a protocol discovery candidate. Frames start at the length byte, after the AA D391 D391 sync. They test parsing and encoding, not radio acceptance.",
+  "description": "Synthetic radiator-rf frames with their decoding. Addresses are invented (controller f1010203, radiator f1040506); f1100001 is a protocol discovery candidate. Frames start at the length byte, after the AA D391 D391 sync. Valid frames have an intact envelope; those of no known message are unknown, with no roles or values. Each invalid frame breaks one check. They test parsing and encoding, not radio acceptance.",
   "specification": "specification.md",
   "values": {
     "air_temperature_C": "4B air temperature, Celsius; absent when 084C (unavailable)",
@@ -457,14 +457,12 @@
       }
     },
     {
-      "name": "report_unknown_record",
-      "description": "Radiator report with an unrecognised record, skipped by its length",
+      "name": "report_extra_record",
+      "description": "Report layout plus an unrecognised record: the records parse by their lengths, but the shape is no known message",
       "frame": "28f1040506c6f1010203df203000404b02a88a02ba00e100641919da000a000a0a47f01234567801515099",
-      "message": "radiator_report",
+      "message": "unknown",
       "source": "f1040506",
       "destination": "f1010203",
-      "radiator": "f1040506",
-      "controller": "f1010203",
       "payload": "df203000404b02a88a02ba00e100641919da000a000a0a47f012345678",
       "records": [
         [
@@ -496,18 +494,58 @@
           "12345678"
         ]
       ],
-      "values": {
-        "air_temperature_C": 20.0,
-        "target_C": 21.0,
-        "mode": 0,
-        "heat_mode": "Comfort",
-        "temp_type": "comfort",
-        "max_power_pct": 100,
-        "duty_1_pct": 25,
-        "duty_2_pct": 25,
-        "on_time_1_s": 10,
-        "on_time_2_s": 10
-      }
+      "values": {}
+    },
+    {
+      "name": "partial_report",
+      "description": "DF and 4B alone: part of a report's layout",
+      "frame": "13f1040506c6f1010203df203000404b02a8aff04503",
+      "message": "unknown",
+      "source": "f1040506",
+      "destination": "f1010203",
+      "payload": "df203000404b02a8",
+      "records": [
+        [
+          "df",
+          "20300040"
+        ],
+        [
+          "4b",
+          "02a8"
+        ]
+      ],
+      "values": {}
+    },
+    {
+      "name": "ack_lookalike",
+      "description": "01=00 then 0A=48: the acknowledgement's tags with another value",
+      "frame": "0ff1040506c6f101020301000a48a6e24d8b",
+      "message": "unknown",
+      "source": "f1040506",
+      "destination": "f1010203",
+      "payload": "01000a48",
+      "records": [
+        [
+          "01",
+          "00"
+        ],
+        [
+          "0a",
+          "48"
+        ]
+      ],
+      "values": {}
+    },
+    {
+      "name": "offer_lookalike",
+      "description": "00 00 then data other than an observed offer's",
+      "frame": "0ff1010203c6f110000100001234d3b41403",
+      "message": "unknown",
+      "source": "f1010203",
+      "destination": "f1100001",
+      "payload": "00001234",
+      "records": null,
+      "values": {}
     },
     {
       "name": "unparseable_payload",
@@ -524,13 +562,13 @@
   "invalid": [
     {
       "name": "inner_crc",
-      "description": "One payload bit flipped",
-      "frame": "23f1040506c6f1010203df203100404b02a88a02ba00e100641919da000a000a0a47cd48c59d",
+      "description": "One payload bit flipped, the outer CRC recomputed: only the inner CRC fails",
+      "frame": "23f1040506c6f1010203df203100404b02a88a02ba00e100641919da000a000a0a47cd4823ea",
       "error": "inner_crc"
     },
     {
       "name": "outer_crc",
-      "description": "Last outer CRC bit flipped",
+      "description": "Last outer CRC bit flipped: only the outer CRC fails",
       "frame": "23f1040506c6f1010203df203000404b02a88a02ba00e100641919da000a000a0a47cd48c59c",
       "error": "outer_crc"
     },
