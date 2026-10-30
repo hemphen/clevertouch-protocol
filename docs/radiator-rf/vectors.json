@@ -13,7 +13,8 @@
     "on_time_1_s": "DA first word, on-time in seconds, following duty_1_pct",
     "on_time_2_s": "DA second word, on-time in seconds, following duty_2_pct",
     "clock": "B2 controller clock, HH:MM:SS; absent unless hour < 24 and minute, second < 60",
-    "device_value_5b_raw": "5B per-device value, unsigned; meaning unknown"
+    "boost_time_min": "5B Boost time in minutes, unsigned: the duration the next Boost runs, the time remaining while one runs",
+    "heating": "DF byte 2 bit 0, the element heating at this moment"
   },
   "valid": [
     {
@@ -53,6 +54,7 @@
         ]
       ],
       "values": {
+        "heating": false,
         "temperature_F": 68.0,
         "setpoint_F": 69.8,
         "mode_raw": 0,
@@ -136,7 +138,7 @@
         "duty_2_pct": 25,
         "on_time_1_s": 0,
         "on_time_2_s": 0,
-        "device_value_5b_raw": 120,
+        "boost_time_min": 120,
         "clock": "12:00:00"
       }
     },
@@ -274,6 +276,7 @@
         ]
       ],
       "values": {
+        "heating": false,
         "temperature_F": 68.0,
         "setpoint_F": 59.9,
         "mode_raw": 11,
@@ -357,7 +360,132 @@
         "duty_2_pct": 25,
         "on_time_1_s": 0,
         "on_time_2_s": 0,
-        "device_value_5b_raw": 120,
+        "boost_time_min": 120,
+        "clock": "12:00:00"
+      }
+    },
+    {
+      "name": "report_heating",
+      "description": "Radiator report with its element heating at this moment: DF byte 2 bit 0",
+      "frame": "23f1040506c6f1010203df203001404b02a88a02ba00e100641919da000a000a0a47dd99311e",
+      "message": "radiator_report",
+      "source": "f1040506",
+      "destination": "f1010203",
+      "radiator": "f1040506",
+      "controller": "f1010203",
+      "payload": "df203001404b02a88a02ba00e100641919da000a000a0a47",
+      "records": [
+        [
+          "df",
+          "20300140"
+        ],
+        [
+          "4b",
+          "02a8"
+        ],
+        [
+          "8a",
+          "02ba00"
+        ],
+        [
+          "e1",
+          "00641919"
+        ],
+        [
+          "da",
+          "000a000a"
+        ],
+        [
+          "0a",
+          "47"
+        ]
+      ],
+      "values": {
+        "heating": true,
+        "temperature_F": 68.0,
+        "setpoint_F": 69.8,
+        "mode_raw": 0,
+        "heat_mode": "comfort",
+        "temp_type": "comfort",
+        "max_power_pct": 100,
+        "duty_1_pct": 25,
+        "duty_2_pct": 25,
+        "on_time_1_s": 10,
+        "on_time_2_s": 10
+      }
+    },
+    {
+      "name": "state_boost",
+      "description": "Controller state: Boost at 66.2 °F (19 °C) with 117 minutes left, echoing a report that was heating",
+      "frame": "38f1010203c6f10405064500004b02a83b004c00008e000084cc000000009720300594029604e100641919da000000005b0075b20c000086a53f89",
+      "message": "controller_state",
+      "source": "f1010203",
+      "destination": "f1040506",
+      "radiator": "f1040506",
+      "controller": "f1010203",
+      "payload": "4500004b02a83b004c00008e000084cc000000009720300594029604e100641919da000000005b0075b20c0000",
+      "records": [
+        [
+          "45",
+          "0000"
+        ],
+        [
+          "4b",
+          "02a8"
+        ],
+        [
+          "3b",
+          "00"
+        ],
+        [
+          "4c",
+          "0000"
+        ],
+        [
+          "8e",
+          "000084"
+        ],
+        [
+          "cc",
+          "00000000"
+        ],
+        [
+          "97",
+          "203005"
+        ],
+        [
+          "94",
+          "029604"
+        ],
+        [
+          "e1",
+          "00641919"
+        ],
+        [
+          "da",
+          "00000000"
+        ],
+        [
+          "5b",
+          "0075"
+        ],
+        [
+          "b2",
+          "0c0000"
+        ]
+      ],
+      "values": {
+        "temperature_F": 68.0,
+        "setpoint_F": 66.2,
+        "mode_raw": 4,
+        "heat_mode": "boost",
+        "temp_type": "boost",
+        "max_power_pct": 100,
+        "duty_1_pct": 25,
+        "duty_2_pct": 25,
+        "on_time_1_s": 0,
+        "on_time_2_s": 0,
+        "boost_time_min": 117,
         "clock": "12:00:00"
       }
     },
@@ -398,6 +526,7 @@
         ]
       ],
       "values": {
+        "heating": false,
         "setpoint_F": 69.8,
         "mode_raw": 0,
         "heat_mode": "comfort",
@@ -446,6 +575,7 @@
         ]
       ],
       "values": {
+        "heating": false,
         "temperature_F": 68.0,
         "setpoint_F": 69.8,
         "mode_raw": 0,
@@ -495,6 +625,7 @@
         ]
       ],
       "values": {
+        "heating": false,
         "temperature_F": 68.0,
         "setpoint_F": 69.8,
         "mode_raw": 0,

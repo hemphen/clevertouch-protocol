@@ -175,15 +175,15 @@ Multi-byte numeric words below are big-endian unless explicitly stated.
 
 | Tag | Value bytes | Message | Meaning / observed value | Evidence |
 | --- | ---: | --- | --- | --- |
-| `DF` | 4 | Report | Opaque radiator state/configuration word | Unknown |
+| `DF` | 4 | Report | Radiator state word; byte 2 bit 0 is heating now, the rest mostly per-device | Heating bit Strong; agrees with controller upload field `33`. Other bits Unknown |
 | `4B` | 2 | Report, state | Air temperature, uint16 | Strong; agrees with controller upload field `16` |
 | `8A` | 3 | Report | `[target:uint16][mode:uint8]`, active target and mode | Observed |
 | `94` | 3 | State | Same layout, controller-side target and mode | Observed with panel changes |
 | `E1` | 4 | Report, state | `[00][front maximum %][duty of rated power %][duty of limited power %]` | Maximum confirmed; the duties' relation observed; uncalibrated |
 | `DA` | 4 | Report, state | Two uint16 interval on-times in seconds, one for each duty | Tentative; zero in every observed controller state |
 | `B2` | 3 | State | Binary hour, minute, second | Strong; time zone/date unknown |
-| `5B` | 2 | State | Slowly varying per-device uint16 | Unknown; not identified as watts or energy |
-| `97` | 3 | State | Opaque controller state/configuration word | Unknown |
+| `5B` | 2 | State | Boost time in minutes, uint16: the next Boost's duration, or the time left during Boost | Strong; × 60 equals controller upload field `14` |
+| `97` | 3 | State | The controller's echo of the radiator's `DF` | Observed for bytes 0 and 2 bit 0; other bits Unknown |
 | `0A` | 1 | Report, ack | `47` | Unknown meaning |
 | `01` | 1 | Ack; also inclusion bind | `00` | Unknown meaning beyond observed exchange position |
 | `19` | 1 | Request | `00` | Unknown meaning |
@@ -255,19 +255,45 @@ interval_Wh = rated_W * on_time_1_s / 3600
 conditional estimates, not measured consumption. Radiators with more than one
 panel were not observed.
 
-### Opaque state and clock fields
+### State words, Boost time and clock (`DF`, `97`, `5B`, `B2`)
 
-`DF` values include `00/20` in byte 0, `30/31` in byte 1, `00/01` in byte 2,
-and `40` in byte 3. The `30→31` change persisted after heating demand returned
-to zero; it must not be labelled a simple heating-active bit. In `97`, byte 0
-equals byte 0 of the radiator's preceding `DF` (**Observed**, every recorded
-controller frame), byte 1 is `30`, and byte 2 is `04` or `05` without a known
-rule. No bit-level meaning is established.
+`DF` byte indices are zero-based within the four-byte value:
 
-`5B` varies both between devices and slightly over time. Changing a configured
-wattage did not change it. `B2` is consistent with a binary clock: require
-hour < 24 and minute/second < 60 before displaying it; do not infer a date,
-time zone or synchronisation requirement.
+| Byte | Observed values | Interpretation |
+| ---: | --- | --- |
+| 0 | `00`, `20` | Constant for each radiator; meaning unknown |
+| 1 | `30`, `31` | Bit 0 set only in the first report after a change made at the radiator itself, and clear again in the report after the controller's `ack` (**Strong**: 7 of 7 changes, one radiator, and no other report) |
+| 2 | `00`, `01` | Bit 0: the element is heating at this moment (**Strong**) |
+| 3 | `40` | Constant; meaning unknown |
+
+The heating bit agreed with controller upload field `33` in 222 of 224
+uploads made within 30 seconds of a radio frame from the same radiator; both
+exceptions were uploads made 2 and 5 seconds after the bit was set. It was set
+in all 15 distinct reports at 100 % duty and in none of 12 at 0 %. Between those it comes and goes
+within the regulation cycle, more often at higher duty, so one report's bit is
+a sample, not the duty.
+
+`97` echoes the `DF` of the report the controller is answering: byte 0 is that
+`DF`'s byte 0, byte 1 is `30`, and byte 2 is `04` with bit 0 copied from
+`DF` byte 2 (**Observed**: 128 of 128 controller frames whose answered
+report was received, that is a report from the same radiator up to 3 seconds
+earlier with the `E1` the frame copies). What `30` and the `04` bit encode is unknown, and no controller frame
+was observed answering a report whose `DF` byte 1 bit 0 was set.
+
+`5B` is the radiator's Boost time in minutes, held and counted by the
+controller. Outside Boost it is the duration the next Boost will run; during
+Boost it is the time left. Multiplied by 60 it equalled controller upload field
+`14` in every one of 308 controller frames sent within 90 seconds of an upload
+for the same radiator. During a recorded Boost it went from 120 to 117 in
+three minutes and returned to 120 when Boost was cancelled at the panel.
+Values below the default (116 on one radiator until it was paired again, which
+reset it to 120) are consistent with a countdown left by a Boost that ended
+otherwise; the upper value observed, 1439, is 23 h 59 min. What the radiator
+does when the count reaches zero has not been observed.
+
+`B2` is consistent with a binary clock: require hour < 24 and minute/second <
+60 before displaying it; do not infer a date, time zone or synchronisation
+requirement.
 
 ## Inclusion / pairing
 
@@ -334,9 +360,10 @@ messages rather than discarding them as noise, without roles or values.
 
 ### Constructing controller state
 
-No rule produces the opaque fields (`45`, `3B`, `4C`, `8E`, `CC`, `97` bytes 1–2,
-`5B`) for a given radiator, so a `controller_state` is built from one the
-controller sent to that radiator earlier. **Observed** in every recorded
+No rule produces the opaque fields (`45`, `3B`, `4C`, `8E`, `CC`, the unknown
+bits of `97`) for a given radiator, and the controller holds the Boost time
+`5B`, so a `controller_state` is built from one the controller sent to that
+radiator earlier. **Observed** in every recorded
 controller frame:
 
 | Record | Content |
@@ -344,13 +371,13 @@ controller frame:
 | `4B`, `E1` | Copied from the radiator's report earlier in the same exchange (119 of 119 such exchanges) |
 | `94` | The target and mode; Off carries raw 320 |
 | `DA` | Zero (502 of 502) |
-| `97` byte 0 | Byte 0 of that report's `DF` (502 of 502) |
+| `97` | Byte 0 and byte 2 bit 0 from that report's `DF`; other bits unchanged |
 | `B2` | The controller's clock |
 | Others | Unchanged from the earlier frame |
 
-Built this way from the controller's previous frame to the same radiator, 107
-of 128 recorded controller frames are reproduced exactly; the rest differ only
-in `97` byte 2 (`04` against `05`).
+Built this way from the controller's previous frame to the same radiator, 119
+of 119 recorded controller frames answering a report are reproduced exactly.
+Keeping `97` byte 2 from the earlier frame instead reproduces 98.
 
 A transmitter can build every message from this reference, but control by
 anything other than the radiator's own controller is **not validated**:
