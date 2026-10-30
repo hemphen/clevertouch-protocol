@@ -71,15 +71,16 @@ one device, rather than an entire home. Known numbers use decimal string values.
 | `7` | Comfort setpoint | Observed deliberate setpoint change |
 | `8` | Frost setpoint | Strong |
 | `9` | Eco/reduced setpoint | Strong |
-| `10`, `11` | Stored temperature values | One corresponds to Boost; their individual mapping is unresolved |
+| `10` | Boost setpoint; Web API `consigne_boost` | Strong; equal in every co-timed Web API read |
+| `11` | Manual setpoint; Web API `consigne_manuel` | Strong; equal in every co-timed Web API read |
 | `12`, `13` | Temperature-like values, possibly lower/upper bounds | Tentative; values corresponding to 5 °C and 30 °C observed |
-| `14` | Boost/timer value in seconds | Strong; counts down during Boost, may retain configured duration while inactive |
+| `14` | Boost time in seconds: the next Boost's duration, or the time left during Boost | Strong; counts down during Boost; always 60 × RF `5B` |
 | `16` | Measured air temperature | Observed correlation with RF `4B`; `2124` means unavailable |
 | `17` | Candidate second temperature channel | Tentative; observed as `2124`, unavailable |
 | `22` | Active mode | Observed agreement with RF `8A`/`94` for common modes |
 | `23` | Configured rated power, watts | Observed deliberate wattage changes; not live electrical power |
-| `33` | Candidate heating-active flag | Tentative; intermittently changes around heating activity, not conclusively mapped |
-| `34` | Status bitfield | Strong: bit `0x2000` correlates with unavailable temperature; meaning of `0x1000` unresolved |
+| `33` | Element heating at this moment | Strong; agrees with RF `DF` byte 2 bit 0 |
+| `34` | Status bitfield; Web API `error_code` | Strong: bit `0x2000` correlates with unavailable temperature. Tentative: `0x1000` is a radio error raised before it; `0x3000` came with Web API errors `ERR_RF_` (Rf error) and `P_RF` (Rf lost) |
 | `35` | Unknown field | No meaning established |
 
 A synthetic subset of a decoded upload is:

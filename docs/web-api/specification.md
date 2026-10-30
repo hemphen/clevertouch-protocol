@@ -121,8 +121,8 @@ Use returned identifiers as opaque values, and tolerate additional fields.
 | `consigne_manuel` | Manual setpoint; also mirrored by the app during several mode changes |
 | `consigne_off` | Used by the app for Off display; not an established temperature-control command |
 | `min_set_point`, `max_set_point` | App-consumed setpoint bounds, in temperature units |
-| `heating_up` | Python client considers string `"1"` active heating |
-| `time_boost` | Boost duration in seconds in client writes; do not equate every read with a fresh configured duration |
+| `heating_up` | Element heating at this moment (`"1"`); controller upload field `33`, RF `DF` byte 2 bit 0 |
+| `time_boost` | Boost time in seconds: the next Boost's duration, or the time left during Boost; controller upload field `14`, RF `5B` × 60. A value below the configured duration outside Boost can be a leftover countdown |
 | `time_boost_format_chrono` | Remaining-time object with `d`, `h`, `m`, `s`; convert as `86400*d + 3600*h + 60*m + s` |
 | `date_start_boost` | App-consumed start marker; wire date/time semantics are not established |
 | `programme` | Encoded schedule; see [schedule operations](specification.md#weekly-schedules) |
