@@ -180,7 +180,7 @@ Multi-byte numeric words below are big-endian unless explicitly stated.
 | `8A` | 3 | Report | `[target:uint16][mode:uint8]`, active target and mode | Observed |
 | `94` | 3 | State | Same layout, controller-side target and mode | Observed with panel changes |
 | `E1` | 4 | Report, state | `[00][front maximum %][duty of rated power %][duty of limited power %]` | Maximum confirmed; the duties' relation observed; uncalibrated |
-| `DA` | 4 | Report, state | Two uint16 interval on-times in seconds, one for each duty | Tentative; zero in every observed controller state |
+| `DA` | 4 | Report, state | Two uint16 on-times in seconds since the previous exchange, one for each duty | Strong; uncalibrated; zero in every observed controller state |
 | `B2` | 3 | State | Binary hour, minute, second | Strong; time zone/date unknown |
 | `5B` | 2 | State | Boost time in minutes, uint16: the next Boost's duration, or the time left during Boost | Strong; × 60 equals controller upload field `14` |
 | `97` | 3 | State | The controller's echo of the radiator's `DF` | Observed for bytes 0 and 2 bit 0; other bits Unknown |
@@ -234,10 +234,13 @@ heating demand, but electrical output has not been calibrated against them. If
 a duty byte exceeds 100, retain it as raw data rather than clamping it into a
 percentage.
 
-`DA` contains two interval on-times in seconds. Values return to zero within
-exchanges and are not monotonic lifetime totals. A recurring sequence is report
-with nonzero `DA` → controller state with zero `DA` → `ack` → report with zero
-`DA`. At 100 % the two words differed by at most 2 seconds in 52 reports. At the 55 % limit
+`DA` contains two on-times in seconds since the radiator's previous exchange.
+Every exchange, periodic or controller-initiated, returns it to zero; they are
+not lifetime totals. A recurring sequence is report with nonzero `DA` →
+controller state with zero `DA` → `ack` → report with zero `DA`. For duty
+fraction `d` over the time `T` since the previous zero-`DA` report, `DA ≈ T·d`
+(**Strong**): the median of `DA / (T·d)` was 0.99 for both words over 36
+intervals at a 100 % limit, middle half 0.82–1.15. At 100 % the two words differed by at most 2 seconds in 52 reports. At the 55 % limit
 the first word averaged 0.54 of the second over 35 reports, varying from 0.38 to
 0.66 between them: the words follow `E1` bytes 2 and 3 but are counted
 separately. The precise reset trigger is unknown. Never sum repeated reports as
@@ -271,7 +274,9 @@ uploads made within 30 seconds of a radio frame from the same radiator; both
 exceptions were uploads made 2 and 5 seconds after the bit was set. It was set
 in all 15 distinct reports at 100 % duty and in none of 12 at 0 %. Between those it comes and goes
 within the regulation cycle, more often at higher duty, so one report's bit is
-a sample, not the duty.
+a sample, not the duty. Nor does the share of reports with it set estimate the
+duty: 24 of 65 partial-duty reports at a 100 % limit, against a mean duty of
+20 %.
 
 `97` echoes the `DF` of the report the controller is answering: byte 0 is that
 `DF`'s byte 0, byte 1 is `30`, and byte 2 is `04` with bit 0 copied from
