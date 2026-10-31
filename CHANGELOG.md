@@ -6,7 +6,10 @@ against this reference.
 ## Unreleased
 
 - Restructured the specifications into tables and short rules; no protocol change.
-- RF: added exchange and inclusion sequence diagrams and the EU duty-cycle limit.
+- RF: added exchange and inclusion sequence diagrams and the EU band rules
+  (h1.5: 1 % duty cycle or LBT+AFA).
+- RF: `DA` reset stated as observed (the next report after an answered one is
+  zero) with its trigger unknown, instead of "every exchange resets".
 - Web API: added observed token lifetimes and rotation, `ERR_NO_DATA`, the
   `smarthome_id` structure, and the full endpoint inventory.
 - Moved open questions from `sources.md` into each specification.
