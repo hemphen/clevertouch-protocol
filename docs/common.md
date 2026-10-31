@@ -1,102 +1,98 @@
-# Shared values and identifiers
+# Shared values
 
-[Clevertouch Web API](web-api/specification.md) · [clevertouch-upstream protocol](clevertouch-upstream/specification.md) · [RF](radiator-rf/specification.md)
+[Web API](web-api/specification.md) · [clevertouch-upstream](clevertouch-upstream/specification.md) · [radiator-rf](radiator-rf/specification.md)
 
 ## Evidence labels
 
+Every claim that is not plain layout carries one of these labels.
+
 | Label | Meaning |
 | --- | --- |
-| **Observed** | Present in validated traffic, or verified by a deliberate device action. Limited to the equipment examined. |
-| **Client** | Implemented or consumed by the Python client or supplied web app; not necessarily independently observed on the wire. |
-| **Strong** | Consistent evidence supports the interpretation, but no decisive controlled test. |
-| **Tentative** | Plausible interpretation with unresolved alternatives. |
-| **Unknown** | Bytes or fields are known; meaning or behaviour is not. |
+| **Observed** | Seen in recorded traffic, or caused by a deliberate action. Limited to the equipment examined. |
+| **Client** | Implemented or consumed by the Python client or the web app; not necessarily seen on the wire. |
+| **Strong** | Consistent evidence supports it; no decisive controlled test. |
+| **Tentative** | Plausible, with unresolved alternatives. |
+| **Unknown** | The bytes or fields are known; their meaning is not. |
 
-Unlabelled encoding and layout rules describe the observed format. They are not
-claims about every firmware version. Unknown fields should be preserved, and
-unrecognised modes should remain visible as raw values.
+Unlabelled encoding and layout rules describe the observed format, not every
+firmware version. Preserve unknown fields and keep unrecognised modes visible as
+raw values.
 
 ## Identifiers
 
 | Identifier | Scope and use |
 | --- | --- |
-| `user_id` | Cloud account identifier returned by `human/user/read/`. |
-| `smarthome_id` | Cloud home identifier; used by home reads and command submission. |
-| `id_device` | Panel-local device identifier, e.g. synthetic `C007-006`; used inside `query[...]`. The Python client recognises prefixes `C` radiator, `E` light, `O` outlet. |
-| `id` / request parameter `device_id` | Cloud device database identifier. The app uses it for schedule operations. **Not interchangeable with `id_device`.** |
-| `num_zone` | Panel-local zone number; join to `zones[].num_zone`. |
-| Controller upload field `"2"` | Local device identifier in the `Cnnn-nnn` form. It is not a model number or RF address. |
-| Controller upload field `"4"` | Device index; observed to match the first numeric group in field `"2"`. It is not the heating mode. |
-| RF address | Four on-wire bytes. The first appears to select a class/family; the last three identify a unit. See [RF addressing](radiator-rf/specification.md#addressing). |
+| `user_id` | Cloud account, returned by `human/user/read/` |
+| `smarthome_id` | Cloud home; used by home reads and commands |
+| `id_device` | Panel-local device ID, e.g. synthetic `C007-006`; used in `query[...]`. Prefix `C` radiator, `E` light, `O` outlet (Client) |
+| `id` / `device_id` | Cloud database device ID; used by schedule operations. **Not interchangeable with `id_device`** |
+| `num_zone` | Panel-local zone number; joins `zones[].num_zone` |
+| Upload field `"2"` | `id_device`, in the `Cnnn-nnn` form. Not a model number or RF address |
+| Upload field `"4"` | Device index; equals the first numeric group of field `"2"`. Not the mode |
+| RF address | Four bytes: family byte plus three-byte identity; see [addressing](radiator-rf/specification.md#addressing) |
 
-No general algorithm converting a cloud/local device ID to an RF address is
-known. Matching changing temperature and mode across the two links can establish
-a correspondence for an installation; it does not establish an address formula.
+No formula converts a cloud or local device ID to an RF address. Matching
+changing temperature and mode across two links establishes the correspondence
+for one installation.
 
 ## Temperatures
 
-The named Clevertouch Web API temperature fields, mapped controller upload fields and RF temperature
-words use **tenths of a degree Fahrenheit**, irrespective of the UI display unit:
+Named Web API temperature fields, mapped upload fields and RF temperature words
+are **tenths of a degree Fahrenheit**, whatever the display unit:
 
 ```text
-C = (raw - 320) / 18
-F = raw / 10
+F   = raw / 10
+C   = (raw - 320) / 18
 raw = round(18 * C + 320)
 ```
 
-| Raw decimal | Raw hex | Interpretation |
+| Raw | Hex | Meaning |
 | ---: | --- | --- |
-| 320 | `0140` | 0 °C; observed RF target while Off |
+| 320 | `0140` | 0 °C; RF target while Off |
 | 680 | `02A8` | 20 °C |
 | 689 | `02B1` | 20.5 °C |
 | 698 | `02BA` | 21 °C |
-| 2124 | `084C` | Unavailable temperature; do not display as 100.22 °C |
+| 2124 | `084C` | Unavailable; not 100.22 °C |
 
-RF words are unsigned big-endian. HTTP numeric values commonly arrive as decimal
-strings. Preserve unavailable values separately from valid zero temperatures.
-Fahrenheit is the wire's unit, so `raw / 10` °F is exact while Celsius values
-rarely terminate (a measured `637` is 17.611… °C). Settings, by contrast, follow
-a Celsius grid: setpoints move in 0.5 °C steps of 9 raw units, and the observed
-reset values are whole or half degrees Celsius.
-The app's rounding and special handling of zero are UI implementation details,
-not a different temperature scale. Its `param_c_f` selects `c` or `f` for display.
-Do not apply this temperature formula to every numeric field: controller upload `"23"`,
-for example, is a configured wattage.
+- RF words are unsigned big-endian; HTTP values usually arrive as decimal strings.
+- °F is exact; °C rarely terminates (raw 637 is 17.611… °C).
+- Setpoints move in 0.5 °C steps of 9 raw units.
+- Keep unavailable separate from a valid zero.
+- The formula does not apply to every numeric field: upload field `"23"` is watts.
+- The app's `param_c_f` (`c` or `f`) selects only the display unit.
 
 ## Heating modes
 
-The following values agree between the app client's `gv_mode`, controller upload `"22"`
-and RF `8A`/`94` **for the observed radiator profile**. This does not make every
-mode in the wider web app valid on every radiator.
+One code namespace is shared by the Web API's `gv_mode`, upload field `"22"` and
+the RF mode byte of `8A`/`94`, **for the observed radiator profile**. Names are
+the `HeatMode` and `TempType` enums of
+[hemphen/clevertouch](https://github.com/hemphen/clevertouch), lowercase.
+`temp_type` names the stored setpoint the mode makes active.
 
-Each code has one name pair, `heat_mode` and `temp_type`, both lowercase. They
-are the `HeatMode` and `TempType` enums of the
-[hemphen/clevertouch](https://github.com/hemphen/clevertouch) client, which
-spells `HeatMode` values capitalised (`Comfort`). Implementations report them
-next to the code; `temp_type` names the stored setpoint the mode makes active.
-
-| Code | `heat_mode` | `temp_type` | Active temperature | RF evidence |
+| Code | `heat_mode` | `temp_type` | Active target | RF |
 | ---: | --- | --- | --- | --- |
 | 0 | `comfort` | `comfort` | Comfort setpoint | Observed |
-| 1 | `off` | `none` | RF target raw 320 | Observed |
+| 1 | `off` | `none` | raw 320 | Observed |
 | 2 | `frost` | `frost` | Frost setpoint | Observed |
 | 3 | `eco` | `eco` | Eco setpoint | Observed |
 | 4 | `boost` | `boost` | Boost setpoint, for a timed period | Observed |
 | 8 | `program` | `comfort` | Comfort setpoint | Observed |
 | 11 | `program` | `eco` | Eco setpoint | Observed |
 
-Program runs the weekly schedule; the panel calls it Auto. Codes 8 and 11 are
-its Comfort and Eco phases in the same namespace as the other modes: an active
-mode moves 0 → 11 → 8 → 0 identically on all three links (**Observed**).
-
-Boost selects a timed setpoint; it need not increase heating. Switching modes
-can restore a stored setpoint. The RF active target is not a permanent Comfort
-register. Additional **Client-only** modes are listed in the Clevertouch Web API reference.
+- Program runs the weekly schedule; the panel calls it Auto. Codes 8 and 11 are
+  its phases. An active mode moved 0 → 11 → 8 → 0 identically on all three links.
+- Boost selects a timed setpoint; it need not increase heating.
+- Further **Client**-only modes are listed in the
+  [Web API](web-api/specification.md#radiator-fields).
 
 ## Completion is layer-specific
 
-A successful Clevertouch Web API write means the server accepted the request. An HTTP
-response to a controller upload means the server answered the panel. Valid RF CRCs
-mean a frame is intact. None of these alone proves that a radiator applied a
-command. Read back device state; a subsequent radiator report provides stronger
-confirmation than an optimistic app update or an RF `ack`.
+| Event | Shows |
+| --- | --- |
+| Web API `OK_SET` | The server accepted the request |
+| HTTP response to a panel upload | The server answered the panel |
+| Valid RF CRCs | The frame is intact |
+| RF `ack` | An exchange closed |
+| Later `radiator_report` with the new values | The radiator applied it |
+
+Only the last confirms a command.
