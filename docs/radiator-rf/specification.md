@@ -18,8 +18,10 @@ defined in [shared values](../common.md#evidence-labels).
 | Preamble, sync | `AA` bytes, then `D3 91 D3 91` | Observed; preamble length unknown |
 
 Receivers match `AA D3 91 D3 91`. Transmit timing and frequency tolerances are
-unknown. 868.0–868.6 MHz is an EU SRD band (ERC/REC 70-03, band h1.4): a
-transmitter is limited to 25 mW e.r.p. and a 1 % duty cycle.
+unknown. 868.0–868.6 MHz is CEPT short-range-device band h1.5
+(ERC/REC 70-03 Annex 1): 25 mW e.r.p., with either a duty cycle of at most 1 %
+or listen-before-talk with adaptive frequency agility (LBT+AFA). National rules
+apply.
 
 ## Frame envelope
 
@@ -141,7 +143,7 @@ Multi-byte words are unsigned big-endian.
 | `8A` | 3 | report | `[target:u16][mode:u8]`, the active target and mode | Observed |
 | `94` | 3 | state | Same layout, the controller's target and mode | Observed |
 | `E1` | 4 | report, state | `[00][front max %][duty of rated %][duty of limited %]` | Byte 1 Observed; duty relation Observed; uncalibrated |
-| `DA` | 4 | report, state | Two u16 on-times in seconds since the previous exchange | Strong; uncalibrated |
+| `DA` | 4 | report, state | Two u16 on-times in seconds since the last reset ([power](#power-e1-da)) | Strong; uncalibrated |
 | `DF` | 4 | report | Radiator state word | Two bits Strong; rest Unknown |
 | `97` | 3 | state | Echo of the answered report's `DF` | Observed for byte 0 and byte 2 bit 0 |
 | `5B` | 2 | state | Boost time in minutes | Strong: × 60 equals upload field `14` |
@@ -186,11 +188,15 @@ The word is tenths of a degree Fahrenheit ([temperatures](../common.md#temperatu
 - Both duties describe one heating element (**Strong**). Multi-panel radiators
   were not observed.
 - Keep a duty byte above 100 as raw data. Do not clamp it.
-- `DA` word 1 counts against duty 1, word 2 against duty 2. Every exchange
-  resets both to zero; they are not totals.
+- `DA` word 1 counts against duty 1, word 2 against duty 2. They are interval
+  counts, not totals.
+- After a report with nonzero `DA` is answered by `controller_state`, the
+  radiator's next report counts again from zero (**Observed**: 71 of 72 carried
+  zero; the other came 1 s later and carried 1 s). Which message resets the
+  count, `controller_state` or the `ack` that always follows it, is unknown.
 - For duty fraction `d` over time `T` since the previous zero-`DA` report,
-  `DA ≈ T·d` (**Strong**: median 0.99 over 36 intervals). The reset trigger is
-  unknown. Never sum repeated reports.
+  `DA ≈ T·d` (**Strong**: median 0.99 over 36 intervals). Never sum repeated
+  reports.
 
 If duty and on-time were calibrated, a single-panel radiator's estimates would
 be the following, with `rated_W` from upload field `23`:
