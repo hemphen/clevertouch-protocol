@@ -2,88 +2,80 @@
 
 [Overview](../../README.md) · [Shared values](../common.md)
 
-This is the account-facing API implemented by `hemphen/clevertouch`. Core
-operations below combine **Client** evidence from that library and the supplied web
-app with observed account reads and schedule and mode delivery. Observations
-describe one Purmo/LVI installation; other providers may differ.
+The account API used by the web app and by
+[hemphen/clevertouch](https://github.com/hemphen/clevertouch). Evidence combines
+**Client** code (the library and the web app, `script.js` 2.8.1) with
+**Observed** reads, schedule pushes and mode pushes on one Purmo/LVI
+installation. Other providers on the same platform may differ.
 
 ## Transport and authentication
 
 | Setting | Purmo/LVI value |
 | --- | --- |
 | API base | `https://e3.lvi.eu/api/v0.1/` |
-| Token endpoint | `https://auth.e3.lvi.eu/realms/purmo/protocol/openid-connect/token` |
-| OAuth client ID | `app-front` (public client identifier, not a secret) |
-| API method | `POST` |
-| Request content type | `application/x-www-form-urlencoded` |
-| API authorization | `Authorization: Bearer <access-token>` |
-| Response | JSON |
-
-The Python client obtains tokens by posting either form below to the token
-endpoint. Password-grant availability is provider policy, not guaranteed by this
-reference; the web app instead manages a Keycloak login session.
+| Token endpoint | `https://auth.e3.lvi.eu/realms/purmo/protocol/openid-connect/token` (Keycloak, realm `purmo`) |
+| OAuth client | `app-front`, public |
+| Requests | `POST`, `application/x-www-form-urlencoded` |
+| Authorization | `Authorization: Bearer <access-token>` |
+| Responses | JSON |
 
 | Grant | Form fields |
 | --- | --- |
-| Password | `grant_type=password`, `client_id=app-front`, `username=<email>`, `password=<password>` |
-| Refresh | `grant_type=refresh_token`, `client_id=app-front`, `refresh_token=<refresh-token>` |
+| Password | `grant_type=password`, `client_id=app-front`, `username`, `password` |
+| Refresh | `grant_type=refresh_token`, `client_id=app-front`, `refresh_token` |
 
-On HTTP 200, the client reads `access_token`, `refresh_token` and `expires_in`
-(seconds). Retain a returned replacement refresh token and use `expires_in`
-rather than the library's fallback lifetimes as a protocol constant. The client
-treats HTTP 400/401 at the token endpoint as authentication failure. The web app
-attempts refresh with 40 seconds of remaining validity; that is a client choice.
-
-The app adds `lang` (default `en_GB`). It also sends a legacy body field `token`
-in many calls while supplying the bearer header. The Python implementation does
-not require that body field for the three core endpoints below. These are
-separate token mechanisms; do not substitute a clevertouch-upstream cursor for either.
+- A refresh returns `access_token`, `refresh_token`, `expires_in` and
+  `refresh_expires_in` (**Observed**: 300 s and 7776000 s, 90 days). Use the
+  returned values, not constants.
+- Every refresh returns a new refresh token; store it. The previous one stayed
+  usable for at least two minutes (**Observed**).
+- An invalid refresh token returns HTTP 400 `invalid_grant`. The client treats
+  400 and 401 from the token endpoint as authentication failure.
+- Password-grant availability is provider policy. The web app uses a Keycloak
+  login session instead and refreshes 40 s before expiry (**Client**).
+- The app adds `lang` (default `en_GB`) and a legacy body field `token`. Requests
+  without `token` succeeded for the library's endpoints (**Observed**). Neither
+  is a clevertouch-upstream cursor.
 
 ## Form encoding and response envelope
 
-Nested objects are flattened to bracketed form names. For example:
+Nested objects flatten to bracketed form names, percent-encoded as usual:
 
 ```text
 query[id_device]=C007-006
 query[consigne_confort]=680
 ```
 
-On the wire, percent-encode form keys and values normally. This is not a JSON
-request body. Brackets are structural field names, not literal JSON text.
-
-The response envelope has this shape (placeholder prose is illustrative):
-
 ```json
-{
-  "code": {"code": "1", "key": "OK", "value": "<status description>"},
-  "data": {},
-  "parameters": {}
-}
+{"code": {"code": "1", "key": "OK", "value": "<description>"}, "data": {}, "parameters": {}}
 ```
 
-| Application status | Client interpretation |
-| --- | --- |
-| `code.code = 1`, `code.key = OK` | Successful read |
-| `code.code = 8`, `code.key = OK_SET` | Successful mutation / accepted query |
-| Other values | Not success under the Python client's checks; preserve status details |
+| `code.code` | `code.key` | Meaning |
+| --- | --- | --- |
+| `1` | `OK` | Successful read |
+| `8` | `OK_SET` | Write accepted; also returned by `user/read/` |
+| `2` | `ERR_NO_DATA` | Nothing to report, e.g. `query/check_failure/` with nothing pending |
 
-The Python client accepts 1 or 8 for reads, only 8 for writes; the app commonly
-checks the named key. `parameters` is optional in the Python parser. HTTP status
-and application status must both be checked. A complete error-code catalogue is
-not established, and a timeout after a write leaves delivery uncertain.
+The library accepts 1 or 8 for reads and only 8 for writes; the app checks
+`code.key`. Check HTTP and application status both. The error catalogue is
+unknown. A timeout after a write leaves delivery uncertain.
 
 ## Core endpoints
 
-All paths are relative to the API base and include their trailing slash.
+Paths are relative to the API base and keep their trailing slash.
 
-| Path | Request fields | Response `data` used by clients |
+| Path | Request fields | Response `data` |
 | --- | --- | --- |
-| `human/user/read/` | `email` | `user_id`, `smarthomes[]` |
+| `human/user/read/` | `email` | `user_id`, `smarthomes[]`. The server identifies the account from the token and ignores `email` (**Observed**) |
 | `human/smarthome/read/` | `smarthome_id` | Home record, `zones[]`, `devices[]` |
-| `human/query/push/` | `smarthome_id`, `context`, `peremption`, `query[...]` | No stable success payload is required by the Python client; check envelope status |
+| `human/query/push/` | `smarthome_id`, `context`, `peremption`, `query[...]` | No success payload; check the envelope |
 
-A home entry supplies `smarthome_id` and `label`. Zone entries supply `num_zone`
-and `zone_label`. A minimal schematic home response is:
+- `smarthome_id` encodes the panel's MAC address in base64 with a suffix
+  (**Observed**). Treat it as opaque.
+- Room names come from `smarthome/read/` `zones[]` (`num_zone`, `zone_label`).
+  The copy in `user/read/` `smarthomes[]` was empty.
+
+Synthetic subset of a home:
 
 ```json
 {
@@ -91,69 +83,74 @@ and `zone_label`. A minimal schematic home response is:
   "label": "Example home",
   "zones": [{"num_zone": "7", "zone_label": "Example room"}],
   "devices": [{
-    "id": "DB_DEVICE_EXAMPLE",
-    "id_device": "C007-006",
-    "num_zone": "7",
-    "label_interface": "Example radiator",
-    "gv_mode": "0",
-    "nv_mode": "0",
-    "temperature_air": "680",
-    "consigne_confort": "698",
-    "heating_up": "1"
+    "id": "DB_DEVICE_EXAMPLE", "id_device": "C007-006", "num_zone": "7",
+    "label_interface": "Example radiator", "gv_mode": "0", "nv_mode": "0",
+    "temperature_air": "680", "consigne_confort": "698", "heating_up": "1"
   }]
 }
 ```
 
-This deliberately shows only a subset of fields, not a complete server response.
-Use returned identifiers as opaque values, and tolerate additional fields.
+Use identifiers as opaque values and tolerate extra fields.
+
+### Other endpoints
+
+The web app calls 29 endpoints (**Client**). Those beyond the core:
+
+| Endpoint | Fields | Evidence |
+| --- | --- | --- |
+| `human/stats/read/` | `smarthome_id`, optional `generated_at` | Observed |
+| `human/sandbox/convert_program/` | `device_id`, `now`, `width` or `height` | Observed |
+| `human/smarthome/get_errors/` | `smarthomeId` (camel case), `type_id=2` | Observed |
+| `human/sandbox/check_last_connexion/` | `smarthome_id` | Observed |
+| `human/sandbox/get_current_timestamp/` | none | Observed: server Unix time, UTC |
+| `human/query/check_failure/` | `smarthome_id` | Observed |
+| `human/device/edit/`, `apply_program/`, `copy_program/` | see [weekly schedules](#weekly-schedules) | Client |
+| `human/smarthome/edit/`, `edit_mode/`, `time_offset/` | see [whole-home modes](#whole-home-mode-operations), [liveness](#delivery-and-liveness) | Client |
+| `human/smarthome/send_weather/`, `user_manual/`; `human/zone/edit/`; `human/user/edit/`, `auth/`, `twin/`, `unpair/`, `delete/`, `get_lang/`, `forgotten_password/`, `add_pushnotification_token/`; `human/sandbox/get_last_cgu/`, `get_db_version/`; `human/mobile/read_demo/` | | Names only; out of scope |
 
 ## Radiator fields
 
-| Field | Meaning / use |
+| Field | Meaning |
 | --- | --- |
-| `gv_mode` | Mode read by both clients; values below |
-| `nv_mode` | Written alongside `gv_mode`; its separate semantics are not established |
+| `gv_mode` | Active mode ([mode table](../common.md#heating-modes)) |
+| `nv_mode` | Written with `gv_mode`; equal in every observation; separate meaning unknown |
 | `temperature_air` | Measured temperature; read-only |
-| `consigne_confort` | Stored Comfort setpoint |
-| `consigne_eco` | Stored Eco setpoint |
-| `consigne_hg` | Stored Frost setpoint |
-| `consigne_boost` | Stored Boost setpoint |
-| `consigne_manuel` | Manual setpoint; also mirrored by the app during several mode changes |
-| `consigne_off` | Used by the app for Off display; not an established temperature-control command |
-| `min_set_point`, `max_set_point` | App-consumed setpoint bounds, in temperature units |
-| `heating_up` | Element heating at this moment (`"1"`); controller upload field `33`, RF `DF` byte 2 bit 0 |
-| `time_boost` | Boost time in seconds: the next Boost's duration, or the time left during Boost; controller upload field `14`, RF `5B` × 60. A value below the configured duration outside Boost can be a leftover countdown |
-| `time_boost_format_chrono` | Remaining-time object with `d`, `h`, `m`, `s`; convert as `86400*d + 3600*h + 60*m + s` |
-| `date_start_boost` | App-consumed start marker; wire date/time semantics are not established |
-| `programme` | Encoded schedule; see [schedule operations](specification.md#weekly-schedules) |
+| `consigne_confort`, `consigne_eco`, `consigne_hg`, `consigne_boost` | Stored Comfort, Eco, Frost and Boost setpoints |
+| `consigne_manuel` | Manual setpoint; mirrored by the app during several mode changes |
+| `consigne_off` | Used by the app to display Off; not a control field |
+| `min_set_point`, `max_set_point` | Setpoint bounds; 5 and 30 °C observed |
+| `heating_up` | `"1"` while the element heats; upload field `33`, RF `DF` byte 2 bit 0 |
+| `time_boost` | Boost time in seconds; upload field `14`, RF `5B` × 60. Below the configured duration outside Boost it can be a leftover countdown |
+| `time_boost_format_chrono` | `{d, h, m, s}`; seconds = `86400d + 3600h + 60m + s` |
+| `date_start_boost` | Consumed by the app; semantics unknown |
+| `puissance_app` | Rated power, watts; upload field `23` |
+| `error_code` | Status bitfield; upload field `34` |
+| `temperature_sol` | `2124` (unavailable) on every device; upload field `17` |
+| `programme` | Compact weekly schedule ([encoding](#compact-encoding)) |
 
-For common modes 0, 1, 2, 3, 4, 8 and 11, see the [shared mode table](../common.md#heating-modes).
-The app additionally recognises 5 (fan), 6 (fan disabled), 13 (program),
-15 (manual) and 16 (program, Boost phase). These extra modes are **Client-only**,
-with device/provider-dependent support; they are not observed Purmo RF modes.
-The library chooses 11 when requesting Program, whereas the app chooses a
-program phase based on the device. There is no established universal write code
-for every provider's Program mode.
+The app also recognises modes 5 (fan), 6 (fan disabled), 13 (program),
+15 (manual) and 16 (program, Boost phase). These are **Client**-only and
+provider-dependent, not observed Purmo RF modes. The library writes 11 for
+Program; the app picks a phase per device. There is no universal Program write
+code.
 
 ## Submitting device commands
 
-For the operations below, use `context=1`. The Python client sends
-`peremption=15000`; the app starts at 20000 and adapts among 15000–30000.
-These are client expiry/timing values in milliseconds, not a guaranteed delivery
-latency or a proven server-side expiry contract.
+Send `human/query/push/` with `context=1`, `peremption` and `query[id_device]`,
+plus:
 
-Every command includes `query[id_device]`. Add the fields for the desired change:
-
-| Operation | Additional `query[...]` fields sent by the Python client |
+| Operation | `query[...]` fields (Client) |
 | --- | --- |
-| Set stored temperature | The corresponding `consigne_*` field, in raw units |
-| Select mode | Both `gv_mode` and `nv_mode`, with the same mode code |
+| Set a stored temperature | The `consigne_*` field, raw units |
+| Select a mode | `gv_mode` and `nv_mode`, same code |
 | Configure Boost duration | `time_boost=<seconds>` |
-| Start Boost with a target and duration | `gv_mode=4`, `nv_mode=4`, `consigne_boost=<raw>`, `time_boost=<seconds>` |
-| Switch a light or outlet | `on_off=1` for on, `on_off=0` for off |
+| Start Boost | `gv_mode=4`, `nv_mode=4`, `consigne_boost=<raw>`, `time_boost=<seconds>` |
+| Switch a light or outlet | `on_off=1` or `on_off=0` |
 
-Example: request Comfort at 21 °C. This is a synthetic, form-encoded request;
-`HOME_EXAMPLE`, `C007-006` and the token must be replaced with authorised values.
+`peremption` is in milliseconds: the library sends 15000; the app starts at
+20000 and adapts within 15000–30000. Its server-side effect is unknown.
+
+Synthetic example, Comfort at 21 °C:
 
 ```http
 POST /api/v0.1/human/query/push/ HTTP/1.1
@@ -164,98 +161,60 @@ Content-Type: application/x-www-form-urlencoded
 smarthome_id=HOME_EXAMPLE&context=1&peremption=15000&query%5Bid_device%5D=C007-006&query%5Bgv_mode%5D=0&query%5Bnv_mode%5D=0&query%5Bconsigne_confort%5D=698
 ```
 
-The app's non-Fenix mode-change path also mirrors the selected target into
-`consigne_manuel` (and uses zero for Off). It may send `time_boost=0` when leaving
-a timer. Those are observed client construction choices, not demonstrated
-requirements for a simple setpoint write. The Fenix branches construct some
-commands differently, so do not apply them to Purmo by analogy.
-
-After `OK_SET`, re-read the home to check the panel/server state, not RF delivery. The app's local updates and
-countdown are optimistic. There is no documented command-specific transaction
-ID or end-to-end acknowledgement in this core API subset. Do not blindly retry
-a timed command after an ambiguous transport failure: it may already have run.
-
-The operations below are **Client** evidence from the supplied app (`script.js`,
-version string 2.8.1). Requests use the Clevertouch Web API's POST/form/bearer conventions.
-Response fields listed are those consumed by the app, not complete schemas.
-Observations additionally cover schedule rendering, statistics, errors,
-liveness and a compact schedule queued through `query/push/`.
-Structured `apply_program/` and `copy_program/` remain Client-only evidence.
-
-The app includes a legacy body `token` on most of these requests. The table names
-it where present; its necessity alongside bearer authentication is unverified.
-`lang` is added by the common request wrapper.
+- The app's non-Fenix path also mirrors the target into `consigne_manuel` (zero
+  for Off) and may send `time_boost=0` when leaving a timer. These are client
+  choices, not requirements. Fenix branches differ; do not apply them to Purmo.
+- `OK_SET` means the server queued the command. The panel collects it on its
+  next poll ([downstream commands](../clevertouch-upstream/specification.md#downstream-commands)).
+- There is no transaction ID or end-to-end acknowledgement. Do not retry a timed
+  command blindly after an ambiguous failure.
 
 ## Weekly schedules
 
-**Client:** the web app sends a custom weekly schedule as named-day intervals to
-`human/device/apply_program/`. It does **not** encode those intervals into the
-compact `programme` string in JavaScript. The conversion takes place on the
-server. Sending intervals therefore does not require reverse-engineering the
-compact string first.
+The app submits an edited week as named-day intervals to
+`human/device/apply_program/`; the **server** builds the compact `programme`
+string (**Client**). Built-in templates and clearing send a compact string
+directly (**Observed** delivery).
 
 ### Operations and identifiers
 
-| Operation | Endpoint (POST) | Fields in addition to `lang` |
+| Operation | Endpoint | Fields besides `lang` |
 | --- | --- | --- |
-| Save an entire edited week | `human/device/apply_program/` | `token`, `device_id`, `peremption`, `new=true`, `program[...]` |
-| Add a selected interval on selected days | Same | `token`, `device_id`, `peremption`, `program[...]`; the app omits `new` |
+| Save a whole edited week | `human/device/apply_program/` | `token`, `device_id`, `peremption`, `new=true`, `program[...]` |
+| Add an interval on selected days | Same | Same, without `new` |
 | Copy another device's week | `human/device/copy_program/` | `token`, `device_id_from`, `device_id_to`, `peremption` |
-| Store an already-encoded template | `human/device/edit/` | `token`, `smarthome_id`, `id_device`, `programme` |
-| Queue that encoded template to the panel | `human/query/push/` | `token`, `smarthome_id`, `context=1`, `peremption`, `query[id_device]`, `query[programme]` |
-| Read a decoded week for display | `human/sandbox/convert_program/` | `device_id`, `now` (Unix seconds), `height` or `width` (rendering size) |
+| Store a compact template | `human/device/edit/` | `token`, `smarthome_id`, `id_device`, `programme` |
+| Queue that template to the panel | `human/query/push/` | `token`, `smarthome_id`, `context=1`, `peremption`, `query[id_device]`, `query[programme]` |
+| Read a decoded week | `human/sandbox/convert_program/` | `device_id`, `now` (Unix s), `height` or `width` (pixels) |
 
-`device_id`, `device_id_from` and `device_id_to` are cloud database IDs from
-`devices[].id`. `id_device` is the panel-local ID from `devices[].id_device`.
-Confusing these two identifiers changes which kind of object the server receives.
-`token` is the app's legacy body token, alongside its bearer header; whether it
-can be omitted on schedule endpoints has not been verified.
-
-The full-week path is `saveEntireProgram`; the interval-add path builds a week
-containing the new interval and default periods. The differing use of `new`
-strongly suggests replacement versus incremental application. The exact server
-merge rules for omitted `new`, overlaps and existing intervals are unknown;
-follow the full-week request shape when submitting an entire replacement.
+`device_id*` are cloud database IDs (`devices[].id`); `id_device` is the
+panel-local ID. Mixing them changes which object the server receives. Merge rules
+for omitted `new`, overlaps and existing intervals are unknown; send whole weeks.
 
 ### Week and interval schema
 
 | Field | Representation |
 | --- | --- |
-| `program` | Object with all seven keys: `Sun`, `Mon`, `Tue`, `Wed`, `Thu`, `Fri`, `Sat` |
-| Each day | Array of intervals in chronological order |
-| `start`, `end` | `HH:MM` strings, with 15-minute boundaries supported by the app |
-| `value` | String `comfort`, `eco`, `booster`, or `false` |
-| `new` | Form value `true` for a full-week save; not the word `new` inside each day |
-| `peremption` | Milliseconds; use the same command timing convention as other app requests (app initially 20000) |
+| `program` | Object with keys `Sun`, `Mon`, `Tue`, `Wed`, `Thu`, `Fri`, `Sat` |
+| Each day | Intervals in chronological order |
+| `start`, `end` | `HH:MM`, quarter-hour steps in the app; `end` `00:00` is end of day |
+| `value` | `comfort`, `eco`, `booster`, or the string `false` (default period, not Off) |
+| `new` | `true` for a whole-week save |
 
-`"false"` is a string meaning an unselected/default period in the app, **not** a
-JSON boolean and not an explicit Off command. The Purmo editor displays Comfort
-periods over a default background; its full-week path fills gaps with `"false"`.
-It is tempting to equate the background to Eco universally, but the complete
-server/device mapping has not been established. Explicit `eco` and `booster`
-intervals appear in the shared app; availability depends on product/provider.
-
-The app emits leading/trailing gap intervals and a full-day
-`{start:"00:00", end:"00:00", value:"false"}` for days without a selected period.
-An `end` of `00:00` marks the end of the day in this construction. Split a period
-crossing midnight between the two named days. Apart from the end-of-day marker,
-the add-period UI rejects end times at or before the start. UI controls use
-`stepminute="15"` and calculate a default end 15 minutes after the start.
-The server's rounding and validation of other minute values are unknown.
+- The app fills gaps with `false` and sends `{start:"00:00", end:"00:00", value:"false"}`
+  for a day with no selection. Split a period crossing midnight between days.
+- Treating the `false` background as Eco everywhere is not established.
+- Server rounding of other minute values is unknown.
 
 ### Complete full-week request
 
-This synthetic example selects Comfort on Monday from 08:15 to 20:45 and leaves
-all other periods at the app's default. The object below is shown **before form
-encoding**, not as a JSON request body:
+Synthetic: Comfort on Monday 08:15–20:45, all else default. Shown before form
+encoding:
 
 ```json
 {
-  "token": "BODY_TOKEN_EXAMPLE",
-  "device_id": "DB_DEVICE_EXAMPLE",
-  "peremption": 20000,
-  "new": "true",
-  "lang": "en_GB",
+  "token": "BODY_TOKEN_EXAMPLE", "device_id": "DB_DEVICE_EXAMPLE",
+  "peremption": 20000, "new": "true", "lang": "en_GB",
   "program": {
     "Sun": [{"start": "00:00", "end": "00:00", "value": "false"}],
     "Mon": [
@@ -272,159 +231,110 @@ encoding**, not as a JSON request body:
 }
 ```
 
-Flatten nested objects and array indices into bracketed names. An exact portion
-of the encoded body is:
+Flattened, part of the body is:
 
 ```text
 program%5BMon%5D%5B1%5D%5Bstart%5D=08%3A15&program%5BMon%5D%5B1%5D%5Bend%5D=20%3A45&program%5BMon%5D%5B1%5D%5Bvalue%5D=comfort
 ```
 
-The request headers and target are:
-
-```http
-POST /api/v0.1/human/device/apply_program/ HTTP/1.1
-Host: e3.lvi.eu
-Authorization: Bearer <access-token>
-Content-Type: application/x-www-form-urlencoded
-```
-
-For example, this standard-library Python snippet turns the complete object
-above (as `request`) into the form body. It performs no network request:
-
 ```python
 from urllib.parse import urlencode
 
-fields = {key: value for key, value in request.items() if key != "program"}
+fields = {k: v for k, v in request.items() if k != "program"}
 for day, intervals in request["program"].items():
-    for index, interval in enumerate(intervals):
+    for i, interval in enumerate(intervals):
         for key in ("start", "end", "value"):
-            fields[f"program[{day}][{index}][{key}]"] = interval[key]
+            fields[f"program[{day}][{i}][{key}]"] = interval[key]
 body = urlencode(fields)
 ```
 
-On a response with `code.key == "OK_SET"`, the app exits the schedule editor.
-Unlike the encoded-template path below, **it makes no separate `query/push/`
-call after `apply_program/` or `copy_program/`**. These endpoints are the app's
-single submission point; internal server queueing is not visible in the source.
-A complete success `data` schema is unknown and the caller does not consume it.
+On `OK_SET` the app closes the editor. It sends **no** `query/push/` after
+`apply_program/` or `copy_program/`. The success `data` schema is unknown.
 
 ### Readback and activation
 
-To retrieve the decoded week, the app posts `device_id`, `now` and, for example,
-`height=265` to `human/sandbox/convert_program/`. It expects application code 1.
-`data.program[dayIndex]` contains `label` and a `nice` array of intervals with
-`start`, `end`, `value`, and rendering fields such as `top` and `height`.
-The editor maps indices 0–6 to Sunday–Saturday; its configurable first day of the
-week only changes display order. The compact string instead starts on Monday,
-as established by a controlled panel edit. The complete response schema is not known.
-
-The compact field is named `programme` in the store/queue requests. Read back
-the decoded week to compare the requested boundaries and values, and refresh
-the home/device state after submission. Saving a week and
-selecting Program mode are separate client operations: the schedule-save request
-does not contain `gv_mode` or `nv_mode`. Use the existing [mode command](#submitting-device-commands)
-when selecting Program; the app uses device-specific program phases. Server-side
-implicit mode changes have not been tested. `OK_SET` and server readback alone
-do not prove that the panel or radiator has received the week.
+- `convert_program/` returns `data.program["0"…"6"]`, **Sunday first**, each with a
+  `label` and a `nice` list of `{start, end, value}` plus layout fields. The app
+  derives the Program phase from it: 8 inside `comfort`, 16 inside `booster`,
+  otherwise 11.
+- Saving a week does not select Program; send a [mode command](#submitting-device-commands)
+  separately. Server-side implicit mode changes are untested.
+- `OK_SET` and readback do not show that the panel or radiator has the week.
 
 ### Already-encoded templates and clearing
 
-For a built-in template the app already has a compact `programme` string. It:
+1. `human/device/edit/` with the compact `programme`.
+2. After `OK_SET`, the same string as `query[programme]` to `human/query/push/`.
+3. Expect `OK_SET` again. A failure here leaves the cloud copy changed and the
+   panel's unchanged.
 
-1. Posts it to `human/device/edit/` with the home and local device ID.
-2. After `OK_SET`, posts the **same string** as `query[programme]` to
-   `human/query/push/`, with `context=1` and `query[id_device]`.
-3. Expects `OK_SET` again. A failed second call can leave the stored cloud
-   schedule changed without confirmed delivery to the panel.
-
-The clear-program action sends 336 zero characters through that same two-step
-path. Reusing a known encoded string is supported by the app; this is distinct
-from inventing an encoder for custom intervals.
+Clearing sends 336 `0` characters the same way.
 
 ### Compact encoding
 
-**Observed for Comfort/Eco:** 336 characters, seven Monday–Sunday days of
-48 characters each. Each character represents two consecutive quarter-hours.
+336 characters: seven days of 48, **Monday first**. Each character covers two
+quarter-hours (**Observed** for Comfort/Eco):
 
-| Character | First quarter-hour | Second quarter-hour |
+| Character | First quarter | Second quarter |
 | --- | --- | --- |
 | `0` | Eco | Eco |
 | `1` | Eco | Comfort |
 | `4` | Comfort | Eco |
 | `5` | Comfort | Comfort |
 
-For these four characters, encode as `4 * first + second`, with Eco = 0 and
-Comfort = 1. This is a complete Comfort/Eco subset, not evidence for other
-two-bit values or Booster encoding. Reject unsupported values rather than
-silently mapping them to Eco.
+```text
+character = 4 * first + second            # Eco = 0, Comfort = 1
+index     = 48 * day + 2 * hour + minute // 30   # Monday = day 0
+quarter   = first if minute % 30 < 15 else second
+```
 
-Character index is `48 * day + 2 * hour + floor(minute / 30)`, where Monday
-is day 0. Within the character, minutes 00–14 or 30–44 select the first
-quarter; 15–29 or 45–59 select the second. Days use the panel's local schedule
-clock; DST transition rules are not established.
-
-A synthetic Monday with Eco only from 08:15 to 08:30 is
-`"5" * 16 + "4" + "5" * 31`. Appending `"5" * 288` gives a complete week
-with Comfort for the remaining six days. These expressions describe string
-construction, not literal values to send. An all-zero week means all Eco,
-not Off and not an absent schedule; selecting Comfort mode overrides it.
-
-A compact `query[programme]` push was observed in the next panel poll as
-command field `"6"`, followed by a panel upload of the same string.
-The panel then executed quarter-hour transitions. This establishes the compact
-queue path; it does not independently validate the structured editor endpoints.
-
-The panel executes the weekly schedule and sends phase targets/modes over RF;
-the tested schedule edits produced no whole-week RF transfer. See
-[downstream commands](../clevertouch-upstream/specification.md#downstream-commands)
-and [RF scheduling](../radiator-rf/specification.md#schedule-execution-and-command-delivery).
+- Reject other characters; do not map them to Eco. Booster encoding is unknown.
+- Synthetic Monday with Eco only 08:15–08:30: `"5" * 16 + "4" + "5" * 31`.
+- All `0` is all Eco, not Off and not "no schedule"; Comfort mode overrides it.
+- Times are the panel's local clock; DST handling is unknown.
+- A pushed `query[programme]` arrived as panel command field `"6"`, was uploaded
+  back, and ran at quarter-hour boundaries (**Observed**). The panel, not the
+  radiator, runs it ([RF](../radiator-rf/specification.md#schedule-execution-and-command-delivery)).
 
 ## Delivery and liveness
 
-**Observed:** the panel reported a cloud mode change to the server before the
-radiator had it. In the one tested delivery, the radiator received it at its
-next periodic exchange, 115 seconds later. Server readback is therefore not
-radiator confirmation.
+In the one tested delivery, the panel reported a cloud mode change upstream
+before the radiator had it; the radiator received it 115 s later at its next
+periodic exchange (**Observed**). Server readback is not radiator confirmation.
 
-
-| Path | Request fields | Response data / interpretation |
+| Path | Fields | Response |
 | --- | --- | --- |
-| `human/query/check_failure/` | `token`, `smarthome_id` | App uses `code.key == OK` to increase its next query timing allowance; other outcomes reset it. No per-query success schema is established. |
-| `human/sandbox/check_last_connexion/` | `token`, `smarthome_id` | `diff`, plus `diffObj.days`, `.hours`, `.minutes`; app compares `diff` with a 60-second threshold |
-| `human/smarthome/time_offset/` | `smarthome_id`, `token` (from the home record in this caller) | `time_offset`, applied to the app's clock in seconds |
-| `human/smarthome/get_errors/` | `token`, `smarthomeId`, `type_id=2` for panel errors | App reads array entries with `error_id`, `error`, `comment` on `OK` |
-
-Note the camel-case `smarthomeId` for `get_errors/`. Do not normalise it to the
-underscore spelling used by most other endpoints. The app checks failures after
-a delay and pauses normal refresh around pending writes; its delays are not wire
-requirements. `check_failure/` is not a documented per-command acknowledgement.
+| `human/query/check_failure/` | `token`, `smarthome_id` | `OK` widens the app's query timing; `ERR_NO_DATA` when nothing is pending. Not a per-command acknowledgement |
+| `human/sandbox/check_last_connexion/` | `token`, `smarthome_id` | `diff` (seconds since the panel's last contact) and `diffObj`; the app warns above 60 s |
+| `human/smarthome/time_offset/` | `smarthome_id`, `token` | `time_offset`, seconds |
+| `human/smarthome/get_errors/` | `token`, `smarthomeId`, `type_id=2` | Entries with `error_id`, `error`, `comment`; e.g. `ERR_RF_` "Rf error", `P_RF` "Rf lost" |
 
 ## Statistics
 
 `human/stats/read/` takes `token`, `smarthome_id` and optionally the previous
-`generated_at`. The app consumes `data.generated_at`, `data.devices` and
-`data.stats_by_zone`; per-device `monthly_conso` has `jan` through `dec` values.
-It derives yearly totals by summing those months. It refreshes cached statistics
-after 600 seconds. The complete schema and measurement provenance are unknown;
-these values do not establish that RF duty fields are calibrated energy meters.
+`generated_at`. `data` holds `generated_at`, `devices` (per `id_device`:
+`device_power`, `daily_time_use`, `yesterday_conso`, `weekly_conso`,
+`monthly_conso` by month, `yearly_conso`, …), `stats_by_day`, `stats_by_zone`
+and `advanced_stats`. Units are not stated, and `daily_time_use` × power does not
+match the consumption values (**Observed**): neither is calibrated energy. The
+app refreshes after 600 s.
 
 ## Whole-home mode operations
 
-The app has a separate multi-step holiday workflow. This is distinct from a
-single-device `gv_mode` command:
+Holiday mode is a separate multi-step workflow (**Client**):
 
-| Operation | Observed client request |
+| Operation | Request |
 | --- | --- |
-| Store dates/state | `human/smarthome/edit/`: `token`, `smarthome_id`, `holiday_start`, `holiday_end`, `holiday_mode` |
-| Store per-device-family holiday mode | `human/smarthome/edit_mode/`: `token`, `smarthome_id`, `smarthome_mode_type_id=2`, `bundle_code` (e.g. `C` or `O`), `num_mode` |
-| Activate delivery | `human/query/push/`: `context=2`, `query[general_mode]=0`, `query[holiday_mode]=1` |
-| Deactivate delivery | Same endpoint: `context=2`, `query[general_mode]=1`, `query[holiday_mode]=0` |
+| Store dates and state | `human/smarthome/edit/`: `token`, `smarthome_id`, `holiday_start`, `holiday_end`, `holiday_mode` |
+| Store per-family mode | `human/smarthome/edit_mode/`: `token`, `smarthome_id`, `smarthome_mode_type_id=2`, `bundle_code` (`C`, `O`), `num_mode` |
+| Activate | `human/query/push/`: `context=2`, `peremption=3600000`, `query[general_mode]=0`, `query[holiday_mode]=1` |
+| Deactivate | Same with `query[general_mode]=1`, `query[holiday_mode]=0` |
 
-The query requests also include `token`, `smarthome_id` and
-`peremption=3600000` in this workflow. Date strings are constructed by the app;
-time-zone semantics and the complete activation workflow are not specified here.
-These field combinations are a partial reference, not a validated recipe for
-replacing all holiday-mode behaviour.
+Date time-zone semantics and the full activation workflow are unknown.
 
-Account creation/deletion, weather, notifications, branding and UI rendering
-endpoints are outside this radiator protocol reference.
+## Open questions
+
+- The server's validation, error catalogue, rate limits, `context` and
+  `peremption` semantics.
+- Whether `apply_program/` reaches the panel, and how fast.
+- Units of `stats/read/`.

@@ -1,26 +1,24 @@
-# clevertouch-upstream protocol specification
+# clevertouch-upstream specification
 
-[Overview](../../README.md) · [Shared values](../common.md) · [Clevertouch Web API](../web-api/specification.md)
+[Overview](../../README.md) · [Shared values](../common.md) · [Web API](../web-api/specification.md)
 
-This is the panel-facing protocol observed on Purmo/LVI Touch E3. The panel
-initiates the connection; server-to-panel information travels in HTTP responses.
-It is not the Clevertouch Web API and is not evidence of a local HTTP service on the panel.
+The HTTP protocol the Touch E3 panel speaks to the provider server, as observed
+on one Purmo/LVI installation. The panel initiates every connection; the server
+replies only in HTTP responses. It is not the Web API, and the panel runs no
+local HTTP service.
 
 ## Transport and request format
 
 | Property | Observed value |
 | --- | --- |
 | Base | `http://e3.lvi.eu/api/v0.1/` |
-| Transport | HTTP/1.1 over TCP port 80, without TLS in the observed profile |
+| Transport | HTTP/1.1, TCP port 80, no TLS |
 | Method | `GET` |
-| Parameters | JSON object encoded as the final URL path segment |
-| Value types | Numeric JSON keys; mostly string values |
+| Parameters | A JSON object, percent-encoded as the last path segment |
+| Values | Numeric string keys; mostly string values |
 | User-Agent | `Mozilla/5.0 SmartHome` |
-| Connection header | `Proxy-Connection: keep-alive` was present; necessity unknown |
-| Authentication | No bearer header observed; controller identity/session binding remains incompletely understood |
-
-Percent-encode the JSON as a path segment, not as form data or a `?query` string.
-A schematic poll is:
+| Other headers | `Proxy-Connection: keep-alive`; necessity unknown |
+| Authentication | None observed |
 
 ```http
 GET /api/v0.1/machine/query/check/%7B%221%22%3A%22CURSOR_EXAMPLE%22%7D HTTP/1.1
@@ -28,145 +26,111 @@ Host: e3.lvi.eu
 User-Agent: Mozilla/5.0 SmartHome
 ```
 
-**Observed:** the panel polls every 5–15 seconds and re-resolves the hostname
-on most connection cycles; neither is a known requirement.
+- The panel polls every 5–15 s and resolves `e3.lvi.eu` again before most
+  connections (**Observed**). A DNS override therefore takes effect within one
+  poll.
+- The channel does not depend on the account's auth server: it kept working
+  through an auth outage that blocked the Web API (**Observed**).
 
 ## Messages in each direction
 
 | Request, panel → server | Payload | Response, server → panel |
 | --- | --- | --- |
-| `machine/device/edit/<JSON>` | One device's state snapshot, with numeric fields below | HTTP 200, `{"code":"8","data":{"100":"<next-cursor>"}}` |
-| `machine/query/check/<JSON>` | `{"1":"<cursor>"}` | Idle: HTTP 200, `{"code":"2","data":{"100":"<next-cursor>"}}` |
-| Same check, command pending | Same request family | HTTP 200, `code="1"`, command in `data["3"]`; see below |
+| `machine/device/edit/<JSON>` | One device's state ([fields](#device-upload-fields)) | `200`, `{"code":"8","data":{"100":"<cursor>"}}` |
+| `machine/query/check/<JSON>` | `{"1":"<cursor>"}` | Idle: `200`, `{"code":"2","data":{"100":"<cursor>"}}` |
+| Same | Same | Command pending: `200`, `code` `"1"`, command in `data["3"]` ([below](#downstream-commands)) |
 
-A common cycle uploads state, receives a cursor in `data["100"]`, then polls
-using that cursor as request field `"1"`. Other connections contain only a poll.
-A state upload is therefore not required on every check. Connections commonly
-close after the poll response; the observed cadence alone does not prove a
-particular long-poll timeout contract.
-
-The controller-facing response `code` is a **bare string**. Clevertouch Web API responses use a
-nested `{code,key,value}` object. Do not share an envelope parser without
-handling this difference.
-
-Field `"1"` and response field `"100"` behave like opaque cursors. Limited idle
-checks accepted missing/fabricated cursor input, but this does **not** establish
-the authentication or routing requirements for real command delivery, state
-writes, device registration or other controller-facing endpoints. Preserve returned
-values and treat them as private session material; no cursor-generation or
-home-binding algorithm is established.
+- A cycle often uploads state, receives a cursor in `data["100"]`, then polls
+  with it as field `"1"`. Many connections carry only a poll.
+- `code` is a **bare string** here; the Web API nests it as `{code, key, value}`.
+  Do not share one envelope parser without handling both.
+- Field `"1"` and `data["100"]` behave as opaque cursors. Treat them as private
+  session data.
 
 ## Device upload fields
 
-Field numbers below are JSON string keys, not byte offsets. The payload reports
-one device, rather than an entire home. Known numbers use decimal string values.
+Keys are JSON strings, not byte offsets. Each upload reports one device; values
+are decimal strings. Temperatures use the [shared scale](../common.md#temperatures).
 
-| Key | Meaning | Evidence / qualification |
+| Key | Meaning | Evidence |
 | --- | --- | --- |
-| `1` | Opaque cursor/session value | Unknown exact semantics |
-| `2` | Local device identifier, e.g. synthetic `C007-006` | Observed; not a model number |
+| `1` | Cursor | Unknown semantics |
+| `2` | `id_device`, e.g. synthetic `C007-006` | Observed; not a model number |
 | `3` | Display label | Observed |
-| `4` | Device index | Observed; **not mode** |
-| `6` | Compact weekly schedule | 336 characters; Monday first; two quarter-hours per character; [Comfort/Eco encoding](../web-api/specification.md#compact-encoding) |
-| `7` | Comfort setpoint | Observed deliberate setpoint change |
+| `4` | Device index | Observed; **not the mode** |
+| `6` | Weekly schedule, 336 characters ([encoding](../web-api/specification.md#compact-encoding)) | Observed |
+| `7` | Comfort setpoint | Observed |
 | `8` | Frost setpoint | Strong |
-| `9` | Eco/reduced setpoint | Strong |
-| `10` | Boost setpoint; Web API `consigne_boost` | Strong; equal in every co-timed Web API read |
-| `11` | Manual setpoint; Web API `consigne_manuel` | Strong; equal in every co-timed Web API read |
-| `12`, `13` | Temperature-like values, possibly lower/upper bounds | Tentative; values corresponding to 5 °C and 30 °C observed |
-| `14` | Boost time in seconds: the next Boost's duration, or the time left during Boost | Strong; counts down during Boost; always 60 × RF `5B` |
-| `16` | Measured air temperature | Observed correlation with RF `4B`; `2124` means unavailable |
-| `17` | Candidate second temperature channel | Tentative; observed as `2124`, unavailable |
-| `22` | Active mode | Observed agreement with RF `8A`/`94` for common modes |
-| `23` | Configured rated power, watts | Observed deliberate wattage changes; not live electrical power |
-| `33` | Element heating at this moment | Strong; agrees with RF `DF` byte 2 bit 0 |
-| `34` | Status bitfield; Web API `error_code` | Strong: bit `0x2000` correlates with unavailable temperature. Tentative: `0x1000` is a radio error raised before it; `0x3000` came with Web API errors `ERR_RF_` (Rf error) and `P_RF` (Rf lost) |
-| `35` | Unknown field | No meaning established |
+| `9` | Eco setpoint | Strong |
+| `10` | Boost setpoint; Web API `consigne_boost` | Strong: equal in every co-timed read |
+| `11` | Manual setpoint; Web API `consigne_manuel` | Strong: equal in every co-timed read |
+| `12`, `13` | 5 °C and 30 °C; probably setpoint bounds | Tentative |
+| `14` | Boost time, seconds; Web API `time_boost` | Strong: always 60 × RF `5B` |
+| `16` | Air temperature; `2124` unavailable | Observed: tracks RF `4B` |
+| `17` | Always `2124`; Web API `temperature_sol` | Tentative: an absent second sensor |
+| `22` | Active mode ([codes](../common.md#heating-modes)) | Observed: matches RF `8A`/`94` |
+| `23` | Rated power, watts; Web API `puissance_app` | Observed: followed two deliberate changes |
+| `33` | Element heating now; Web API `heating_up` | Strong: matches RF `DF` byte 2 bit 0 |
+| `34` | Status bits; Web API `error_code` | See below |
+| `35` | Unknown | Never changed |
 
-A synthetic subset of a decoded upload is:
+`34`: bit `0x2000` appears exactly when field `16` goes unavailable
+(**Strong**). `0x1000` appeared minutes earlier on one device (**Tentative**: a
+radio error). `0x3000` coincided with Web API errors `ERR_RF_` "Rf error" and
+`P_RF` "Rf lost".
+
+Synthetic subset:
 
 ```json
-{
-  "1": "CURSOR_EXAMPLE",
-  "2": "C007-006",
-  "3": "Example radiator",
-  "4": "7",
-  "7": "698",
-  "8": "446",
-  "9": "590",
-  "14": "7200",
-  "16": "680",
-  "17": "2124",
-  "22": "0",
-  "23": "1000",
-  "34": "0"
-}
+{"1": "CURSOR_EXAMPLE", "2": "C007-006", "3": "Example radiator", "4": "7",
+ "7": "698", "8": "446", "9": "590", "14": "7200", "16": "680", "17": "2124",
+ "22": "0", "23": "1000", "34": "0"}
 ```
 
-This omits unmapped fields and the schedule for readability; it is **not** a
-validated minimal accepted write. Use [temperature conversion](../common.md#temperatures)
-only for the mapped temperature fields. Panel count was not identified in the
-observed upload; a settings change producing no visible field change does not
-prove it is never transferred elsewhere. For a two-panel radiator, whether
-field `23` is total or per-panel power is unresolved.
+This is not a validated minimal write. Panel count is not uploaded. For a
+multi-panel radiator, whether `23` is total or per panel is unknown.
 
 ## Receiving and applying state
 
-For a receiver of panel uploads, preserve unknown keys and the distinction
-between strings, missing fields and unavailable temperatures. A valid reading
-may be cached; it is not by itself proof of current radio liveness. Bit `0x2000`
-of field `34` is useful supporting evidence for an unavailable reading, not a
-complete documented device-health model.
-
-The panel reports local changes upward within seconds (1–7 seconds observed).
-That is **panel → server reporting**, not command latency.
+- Preserve unknown keys, and keep strings, missing fields and unavailable
+  temperatures distinct.
+- A cached valid reading is not proof of current radio contact. Field `16`
+  holding a changing valid value shows the panel is hearing the radiator.
+- The panel uploads local changes within 1–7 s (**Observed**). This is
+  reporting, not command latency.
 
 ## Downstream commands
 
-**Observed:** a queued Web API command is returned by `machine/query/check/`
-in this envelope. This is a synthetic mode-change example:
+A queued Web API command arrives in the `query/check` response (**Observed**).
+Synthetic mode command:
 
 ```json
-{
-  "code": "1",
-  "data": {
-    "100": "NEXT_CURSOR_EXAMPLE",
-    "2": "1",
-    "3": {"2": "C007-006", "22": "0", "15": "0"}
-  }
-}
+{"code": "1",
+ "data": {"100": "NEXT_CURSOR_EXAMPLE", "2": "1",
+          "3": {"2": "C007-006", "22": "0", "15": "0"}}}
 ```
 
 | Location | Meaning |
 | --- | --- |
-| `data["100"]` | Next opaque cursor |
-| `data["2"]` | Observed string `"1"`; count/type meaning unresolved |
-| `data["3"]` | Single observed command object |
-| Command `"2"` | Panel-local destination device ID |
-| Command `"6"` | Complete compact schedule, corresponding to Web API `programme` |
-| Command `"22"`, `"15"` | Both `"0"` in an observed Comfort command sent with `gv_mode=0,nv_mode=0` |
+| `data["100"]` | Next cursor |
+| `data["2"]` | `"1"` observed; meaning unknown |
+| `data["3"]` | One command, keyed like an upload |
+| Command `"2"` | Target `id_device` |
+| Command `"6"` | Whole compact schedule (Web API `programme`) |
+| Command `"22"`, `"15"` | Mode; both `"0"` for a request with `gv_mode=0`, `nv_mode=0`, so which maps to which is open |
 
-**Observed:** schedule commands (`"6"`) and a mode command (`"22"`, `"15"`). The
-mode command carried `"0"` in both fields for a request sent with
-`gv_mode=0,nv_mode=0`, so which Web API field maps to which key is open; `"22"`
-is the active mode in uploads. Other upload keys are not known to be writable,
-and batching of several commands is unknown.
+- Observed commands: schedules (`"6"`) and a mode (`"22"`, `"15"`). Other keys are
+  not known to be writable. Batching is unknown.
+- The panel collects a command at its next poll, seconds after submission, and
+  echoes the result in its next `device/edit`.
+- The echo shows the panel accepted it, not that the radiator has it
+  ([RF delivery](../radiator-rf/specification.md#schedule-execution-and-command-delivery)).
+- The panel runs its stored schedule; a schedule edit alone sends nothing to the
+  radiators.
 
-For a schedule command, replace the mode fields with `"6": "<336 characters>"`;
-the placeholder is not a valid schedule. The panel collects a queued command
-at its next poll, seconds after Web API submission, and uploads the accepted
-schedule with `device/edit` seconds later.
+## Open questions
 
-An upload echo shows that the panel accepted a command, not that a radiator has
-it: in the one tested delivery, a mode command reached the radiator at its next
-periodic exchange
-([RF delivery](../radiator-rf/specification.md#schedule-execution-and-command-delivery)).
-Command IDs, acknowledgements, retries, expiry and error responses are unknown.
-
-The panel runs its stored schedule and sends the active phase target/mode to the
-radiator. Schedule edits alone need not emit RF state changes. See the
-[compact schedule](../web-api/specification.md#compact-encoding) and
-[RF execution](../radiator-rf/specification.md#schedule-execution-and-command-delivery).
-
-Boot registration, home association and cursor routing are not covered, so
-these messages are not enough for a replacement server.
+- Command IDs, acknowledgement, retries, expiry and errors.
+- Boot registration, home association and cursor routing. Without these the
+  messages above do not suffice for a replacement server.
+- Fields `12`, `13`, `35`; the meaning of `data["2"]`.
