@@ -159,7 +159,9 @@ Multi-byte words are unsigned big-endian.
 
 The constant values never varied across all modes, Boost, a 55 % power limit, a
 rating change, re-pairing, and heating on and off. Tag `5E`, a second
-temperature in related Watts decoders, was never seen.
+temperature in related Watts decoders, was never seen; the panel's upload field
+`17`, the matching floor temperature, always reads unavailable
+([upload fields](../clevertouch-upstream/specification.md)).
 
 ### Temperature and mode (`4B`, `8A`, `94`)
 
