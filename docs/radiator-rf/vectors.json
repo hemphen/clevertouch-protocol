@@ -18,9 +18,7 @@
     "changed_at_radiator": "DF byte 1 bit 0, the first report after a change made at the radiator",
     "diagnostic_code": "4C byte 0, a diagnostic code; 0 is no fault (Tentative)",
     "diagnostic_flags": "4C byte 1, warning flags (Tentative)",
-    "regulation_sensor": "8E byte 2 bits 0-1: ambient, floor, floor_limited or air (Tentative)",
-    "floor_limit_1_F": "CC first word, a floor-temperature limit in degrees Fahrenheit; absent when 0 (inactive) or 084C (Tentative)",
-    "floor_limit_2_F": "CC second word, as floor_limit_1_F (Tentative)"
+    "regulation_sensor": "8E byte 2 bits 0-1: ambient, floor, floor_limited or air (Tentative)"
   },
   "valid": [
     {
@@ -560,14 +558,14 @@
     },
     {
       "name": "state_tentative_records",
-      "description": "Controller state with unobserved values in the Tentative records: diagnostic code 1, flags 2, air sensor, floor limits 56.0 and 80.0 °F",
-      "frame": "38f1010203c6f10405064500004b02a83b004c01028e000087cc02300320972030049402ba00e100641919da000000005b0078b20c000053a87b6e",
+      "description": "Controller state with unobserved values in the Tentative records: diagnostic code 1, flags 2, air sensor",
+      "frame": "38f1010203c6f10405064500004b02a83b004c01028e000087cc00000000972030049402ba00e100641919da000000005b0078b20c0000881362d4",
       "message": "controller_state",
       "source": "f1010203",
       "destination": "f1040506",
       "radiator": "f1040506",
       "controller": "f1010203",
-      "payload": "4500004b02a83b004c01028e000087cc02300320972030049402ba00e100641919da000000005b0078b20c0000",
+      "payload": "4500004b02a83b004c01028e000087cc00000000972030049402ba00e100641919da000000005b0078b20c0000",
       "records": [
         [
           "45",
@@ -591,7 +589,7 @@
         ],
         [
           "cc",
-          "02300320"
+          "00000000"
         ],
         [
           "97",
@@ -623,8 +621,6 @@
         "diagnostic_code": 1,
         "diagnostic_flags": 2,
         "regulation_sensor": "air",
-        "floor_limit_1_F": 56.0,
-        "floor_limit_2_F": 80.0,
         "setpoint_F": 69.8,
         "mode_raw": 0,
         "heat_mode": "comfort",
