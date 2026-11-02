@@ -152,14 +152,17 @@ Multi-byte words are unsigned big-endian.
 | `01` | 1 | ack, bind | `00` | Unknown |
 | `19` | 1 | request | `00` | Unknown |
 | `45` | 2 | state | `00 00` | Unknown |
-| `3B` | 1 | state | `00` | Unknown |
-| `4C` | 2 | state | `00 00` | Unknown |
-| `8E` | 3 | state | `00 00 84` | Unknown; not the Watts floor-thermostat field |
-| `CC` | 4 | state | `00 00 00 00` | Unknown |
+| `3B` | 1 | state | `00`: flags, none set | Tentative |
+| `4C` | 2 | state | `00 00`: `[diagnostic code][warning flags]`, no fault | Tentative |
+| `8E` | 3 | state | `00 00 84`: bytes 0–1 unknown; byte 2 bits 0–1 the regulation sensor, 0 ambient, 1 floor, 2 floor-limited, 3 air | Tentative for byte 2; bytes 0–1 Unknown, not the setpoint range |
+| `CC` | 4 | state | `00 00 00 00`: two u16 floor-temperature limits in the `4B` scale; zero is inactive | Tentative |
 
 The constant values never varied across all modes, Boost, a 55 % power limit, a
-rating change, re-pairing, and heating on and off. Tag `5E`, a second
-temperature in related Watts decoders, was never seen.
+rating change, re-pairing, and heating on and off. The Tentative readings are
+those of the related Watts decoder ([sources](../sources.md#related-decoders)),
+kept where the recorded frames do not contradict them; they were not tested with
+a fault or another sensor. Bytes 0–1 of `8E` stayed zero while the panel's
+setpoint range was 5–30 °C.
 
 ### Temperature and mode (`4B`, `8A`, `94`)
 
