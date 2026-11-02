@@ -13,13 +13,12 @@ against this reference.
 - Web API: added observed token lifetimes and rotation, `ERR_NO_DATA`, the
   `smarthome_id` structure, and the full endpoint inventory.
 - Moved open questions from `sources.md` into each specification.
-- RF: Tentative meanings for `3B`, `4C`, `8E` byte 2 and `CC`, and the unseen
-  `5E`, from the Watts decoder where recorded frames do not contradict them.
-  `8E` bytes 0–1 are not the setpoint range. Upload field `17` is the floor
-  temperature `5E` would carry.
-- Vectors: `changed_at_radiator`, `diagnostic_code`, `diagnostic_flags`,
-  `regulation_sensor`, `floor_limit_1_F` and `floor_limit_2_F`, with two new
-  cases (radiator-rf 0.1.0a2).
+- RF: Tentative meanings for `3B`, `4C` and `8E` byte 2, from the Watts decoder
+  where recorded frames do not contradict them. `8E` bytes 0–1 are not the
+  setpoint range. Fields never seen in a recording, such as `5E`, are not
+  described.
+- Vectors: `changed_at_radiator`, `diagnostic_code`, `diagnostic_flags` and
+  `regulation_sensor`, with two new cases (radiator-rf 0.1.0a2).
 
 ## 5dc2bcf — 2026-10-30
 
