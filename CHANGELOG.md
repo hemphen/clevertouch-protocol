@@ -17,6 +17,9 @@ against this reference.
   `5E`, from the Watts decoder where recorded frames do not contradict them.
   `8E` bytes 0–1 are not the setpoint range. Upload field `17` is the floor
   temperature `5E` would carry.
+- Vectors: `changed_at_radiator`, `diagnostic_code`, `diagnostic_flags`,
+  `regulation_sensor`, `floor_limit_1_F` and `floor_limit_2_F`, with two new
+  cases (radiator-rf 0.1.0a2).
 
 ## 5dc2bcf — 2026-10-30
 

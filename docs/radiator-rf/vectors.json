@@ -14,7 +14,13 @@
     "on_time_2_s": "DA second word, on-time in seconds, following duty_2_pct",
     "clock": "B2 controller clock, HH:MM:SS; absent unless hour < 24 and minute, second < 60",
     "boost_time_min": "5B Boost time in minutes, unsigned: the duration the next Boost runs, the time remaining while one runs",
-    "heating": "DF byte 2 bit 0, the element heating at this moment"
+    "heating": "DF byte 2 bit 0, the element heating at this moment",
+    "changed_at_radiator": "DF byte 1 bit 0, the first report after a change made at the radiator",
+    "diagnostic_code": "4C byte 0, a diagnostic code; 0 is no fault (Tentative)",
+    "diagnostic_flags": "4C byte 1, warning flags (Tentative)",
+    "regulation_sensor": "8E byte 2 bits 0-1: ambient, floor, floor_limited or air (Tentative)",
+    "floor_limit_1_F": "CC first word, a floor-temperature limit in degrees Fahrenheit; absent when 0 (inactive) or 084C (Tentative)",
+    "floor_limit_2_F": "CC second word, as floor_limit_1_F (Tentative)"
   },
   "valid": [
     {
@@ -55,6 +61,7 @@
       ],
       "values": {
         "heating": false,
+        "changed_at_radiator": false,
         "temperature_F": 68.0,
         "setpoint_F": 69.8,
         "mode_raw": 0,
@@ -129,6 +136,9 @@
       ],
       "values": {
         "temperature_F": 68.0,
+        "diagnostic_code": 0,
+        "diagnostic_flags": 0,
+        "regulation_sensor": "ambient",
         "setpoint_F": 69.8,
         "mode_raw": 0,
         "heat_mode": "comfort",
@@ -277,6 +287,7 @@
       ],
       "values": {
         "heating": false,
+        "changed_at_radiator": false,
         "temperature_F": 68.0,
         "setpoint_F": 59.9,
         "mode_raw": 11,
@@ -351,6 +362,9 @@
       ],
       "values": {
         "temperature_F": 68.0,
+        "diagnostic_code": 0,
+        "diagnostic_flags": 0,
+        "regulation_sensor": "ambient",
         "setpoint_F": 32.0,
         "mode_raw": 1,
         "heat_mode": "off",
@@ -402,6 +416,7 @@
       ],
       "values": {
         "heating": true,
+        "changed_at_radiator": false,
         "temperature_F": 68.0,
         "setpoint_F": 69.8,
         "mode_raw": 0,
@@ -476,6 +491,9 @@
       ],
       "values": {
         "temperature_F": 68.0,
+        "diagnostic_code": 0,
+        "diagnostic_flags": 0,
+        "regulation_sensor": "ambient",
         "setpoint_F": 66.2,
         "mode_raw": 4,
         "heat_mode": "boost",
@@ -486,6 +504,137 @@
         "on_time_1_s": 0,
         "on_time_2_s": 0,
         "boost_time_min": 117,
+        "clock": "12:00:00"
+      }
+    },
+    {
+      "name": "report_changed_at_radiator",
+      "description": "Radiator report right after a change made at the radiator: DF byte 1 bit 0",
+      "frame": "23f1040506c6f1010203df203100404b02a88a02ba00e100641919da000a000a0a471d84c14e",
+      "message": "radiator_report",
+      "source": "f1040506",
+      "destination": "f1010203",
+      "radiator": "f1040506",
+      "controller": "f1010203",
+      "payload": "df203100404b02a88a02ba00e100641919da000a000a0a47",
+      "records": [
+        [
+          "df",
+          "20310040"
+        ],
+        [
+          "4b",
+          "02a8"
+        ],
+        [
+          "8a",
+          "02ba00"
+        ],
+        [
+          "e1",
+          "00641919"
+        ],
+        [
+          "da",
+          "000a000a"
+        ],
+        [
+          "0a",
+          "47"
+        ]
+      ],
+      "values": {
+        "heating": false,
+        "changed_at_radiator": true,
+        "temperature_F": 68.0,
+        "setpoint_F": 69.8,
+        "mode_raw": 0,
+        "heat_mode": "comfort",
+        "temp_type": "comfort",
+        "max_power_pct": 100,
+        "duty_1_pct": 25,
+        "duty_2_pct": 25,
+        "on_time_1_s": 10,
+        "on_time_2_s": 10
+      }
+    },
+    {
+      "name": "state_tentative_records",
+      "description": "Controller state with unobserved values in the Tentative records: diagnostic code 1, flags 2, air sensor, floor limits 56.0 and 80.0 °F",
+      "frame": "38f1010203c6f10405064500004b02a83b004c01028e000087cc02300320972030049402ba00e100641919da000000005b0078b20c000053a87b6e",
+      "message": "controller_state",
+      "source": "f1010203",
+      "destination": "f1040506",
+      "radiator": "f1040506",
+      "controller": "f1010203",
+      "payload": "4500004b02a83b004c01028e000087cc02300320972030049402ba00e100641919da000000005b0078b20c0000",
+      "records": [
+        [
+          "45",
+          "0000"
+        ],
+        [
+          "4b",
+          "02a8"
+        ],
+        [
+          "3b",
+          "00"
+        ],
+        [
+          "4c",
+          "0102"
+        ],
+        [
+          "8e",
+          "000087"
+        ],
+        [
+          "cc",
+          "02300320"
+        ],
+        [
+          "97",
+          "203004"
+        ],
+        [
+          "94",
+          "02ba00"
+        ],
+        [
+          "e1",
+          "00641919"
+        ],
+        [
+          "da",
+          "00000000"
+        ],
+        [
+          "5b",
+          "0078"
+        ],
+        [
+          "b2",
+          "0c0000"
+        ]
+      ],
+      "values": {
+        "temperature_F": 68.0,
+        "diagnostic_code": 1,
+        "diagnostic_flags": 2,
+        "regulation_sensor": "air",
+        "floor_limit_1_F": 56.0,
+        "floor_limit_2_F": 80.0,
+        "setpoint_F": 69.8,
+        "mode_raw": 0,
+        "heat_mode": "comfort",
+        "temp_type": "comfort",
+        "max_power_pct": 100,
+        "duty_1_pct": 25,
+        "duty_2_pct": 25,
+        "on_time_1_s": 0,
+        "on_time_2_s": 0,
+        "boost_time_min": 120,
         "clock": "12:00:00"
       }
     },
@@ -527,6 +676,7 @@
       ],
       "values": {
         "heating": false,
+        "changed_at_radiator": false,
         "setpoint_F": 69.8,
         "mode_raw": 0,
         "heat_mode": "comfort",
@@ -576,6 +726,7 @@
       ],
       "values": {
         "heating": false,
+        "changed_at_radiator": false,
         "temperature_F": 68.0,
         "setpoint_F": 69.8,
         "mode_raw": 0,
@@ -626,6 +777,7 @@
       ],
       "values": {
         "heating": false,
+        "changed_at_radiator": false,
         "temperature_F": 68.0,
         "setpoint_F": 69.8,
         "mode_raw": 0,
