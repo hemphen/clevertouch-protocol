@@ -13,6 +13,10 @@ against this reference.
 - Web API: added observed token lifetimes and rotation, `ERR_NO_DATA`, the
   `smarthome_id` structure, and the full endpoint inventory.
 - Moved open questions from `sources.md` into each specification.
+- RF: Tentative meanings for `3B`, `4C`, `8E` byte 2 and `CC`, and the unseen
+  `5E`, from the Watts decoder where recorded frames do not contradict them.
+  `8E` bytes 0–1 are not the setpoint range. Upload field `17` is the floor
+  temperature `5E` would carry.
 
 ## 5dc2bcf — 2026-10-30
 

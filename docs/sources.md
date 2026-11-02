@@ -44,7 +44,9 @@ The bundles are not redistributed. They are identified by hash:
 
 - [rtl_433 Watts Vision decoder](https://github.com/merbanan/rtl_433/blob/406f9a33550a2b6b3d0d8a8a486417ce5b3f13ab/src/devices/watts_vision.c)
   and [issue #2885](https://github.com/merbanan/rtl_433/issues/2885): the shared
-  envelope, checksums and tags of the Watts family. Their interpretations are not
-  assumed for Purmo without observation.
+  envelope, checksums and tags of the Watts family. Their readings are adopted
+  as **Tentative** only where the recorded Purmo frames and the web app do not
+  contradict them. Two are not adopted: `8E` bytes 0–1 as the setpoint range,
+  and mode 16 as a manual override.
 - [Yali Digital installation manual](https://www.purmo.com/docs/34019-Yali-Digital-Installation-Manual-COMBO-WEB.pdf):
   the radiator's parameter menu, including `rF.bi` inclusion mode.
