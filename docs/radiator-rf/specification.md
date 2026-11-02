@@ -155,7 +155,7 @@ Multi-byte words are unsigned big-endian.
 | `3B` | 1 | state | `00`: flags, none set | Tentative |
 | `4C` | 2 | state | `00 00`: `[diagnostic code][warning flags]`, no fault | Tentative |
 | `8E` | 3 | state | `00 00 84`: bytes 0–1 unknown; byte 2 bits 0–1 the regulation sensor, 0 ambient, 1 floor, 2 floor-limited, 3 air | Tentative for byte 2; bytes 0–1 Unknown, not the setpoint range |
-| `CC` | 4 | state | `00 00 00 00` | Unknown |
+| `CC` | 4 | state | `00 00 00 00`: two u16 floor-temperature limits in the `4B` scale; zero is inactive | Tentative |
 
 The constant values never varied across all modes, Boost, a 55 % power limit, a
 rating change, re-pairing, and heating on and off. The Tentative readings are
