@@ -2,7 +2,7 @@
 
 [Overview](../README.md)
 
-Compiled in October 2026. It describes the provider's service as it was then.
+Compiled in October–November 2026. The first-party observations describe the provider's service as it was in October; the November Watts source is separate third-party evidence.
 
 | Source | Establishes |
 | --- | --- |
