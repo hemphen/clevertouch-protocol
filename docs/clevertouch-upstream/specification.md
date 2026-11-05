@@ -21,7 +21,7 @@ local HTTP service.
 | Authentication | None observed |
 
 ```http
-GET /api/v0.1/machine/query/check/%7B%221%22%3A%22CURSOR_EXAMPLE%22%7D HTTP/1.1
+GET /api/v0.1/machine/query/check/%7B%221%22%3A%22IDENTITY_TOKEN_EXAMPLE%22%7D HTTP/1.1
 Host: e3.lvi.eu
 User-Agent: Mozilla/5.0 SmartHome
 ```
@@ -36,16 +36,36 @@ User-Agent: Mozilla/5.0 SmartHome
 
 | Request, panel → server | Payload | Response, server → panel |
 | --- | --- | --- |
-| `machine/device/edit/<JSON>` | One device's state ([fields](#device-upload-fields)) | `200`, `{"code":"8","data":{"100":"<cursor>"}}` |
-| `machine/query/check/<JSON>` | `{"1":"<cursor>"}` | Idle: `200`, `{"code":"2","data":{"100":"<cursor>"}}` |
+| `machine/device/edit/<JSON>` | One device's state ([fields](#device-upload-fields)) | `200`, `{"code":"8","data":{"100":"<time-token>"}}` |
+| `machine/query/check/<JSON>` | `{"1":"<identity-token>"}` | Idle: `200`, `{"code":"2","data":{"100":"<time-token>"}}` |
 | Same | Same | Command pending: `200`, `code` `"1"`, command in `data["3"]` ([below](#downstream-commands)) |
+| `machine/smarthome/edit/<JSON>` | Panel details ([fields](#panel-fields)) | `200`, `code` `"8"` |
+| `machine/device/edit_all/<JSON>` | Device list ([fields](#panel-fields)) | `200`, `code` `"8"` |
 
-- A cycle often uploads state, receives a cursor in `data["100"]`, then polls
-  with it as field `"1"`. Many connections carry only a poll.
+- A cycle often uploads state, then polls. Many connections carry only a poll.
+- Every request carries field `"1"`, the identity token: 28 characters that
+  encode the panel's identity and the time from the latest `data["100"]`
+  (**Observed**: 2151 of 2151 requests).
+- Every response carries `data["100"]`, the time token: 10 characters that
+  encode the server's Unix time (**Observed**).
+- The encodings are not described here. Keep both tokens private.
 - `code` is a **bare string** here; the Web API nests it as `{code, key, value}`.
   Do not share one envelope parser without handling both.
-- Field `"1"` and `data["100"]` behave as opaque cursors. Treat them as private
-  session data.
+
+### Panel fields
+
+| Endpoint, key | Meaning | Evidence |
+| --- | --- | --- |
+| `smarthome/edit` `3` | Panel MAC address | Observed |
+| `smarthome/edit` `6`, `7` | Versions of the interface and the Wi-Fi module, as `NN.NN` | Tentative |
+| `smarthome/edit` `8` | Temperature unit, `C` | Tentative |
+| `smarthome/edit` `9`, `41` | `00-01`, `0` | Unknown |
+| `smarthome/edit` `12` | Panel local time, `YYYY-MM-DD HH:MM:00` | Observed |
+| `device/edit_all` `28` | `C`, the radiator family | Tentative |
+| `device/edit_all` `32` | Paired devices, as `[{"2": id_device}, …]` | Observed |
+
+`smarthome/edit` came once an hour (**Tentative**: two uploads) and during
+inclusion; `device/edit_all` once, during inclusion (**Observed**).
 
 ## Device upload fields
 
@@ -54,7 +74,7 @@ are decimal strings. Temperatures use the [shared scale](../common.md#temperatur
 
 | Key | Meaning | Evidence |
 | --- | --- | --- |
-| `1` | Cursor | Unknown semantics |
+| `1` | Identity token ([above](#messages-in-each-direction)) | Observed |
 | `2` | `id_device`, e.g. synthetic `C007-006` | Observed; not a model number |
 | `3` | Display label | Observed |
 | `4` | Device index | Observed; **not the mode** |
@@ -82,7 +102,7 @@ radio error). `0x3000` coincided with Web API errors `ERR_RF_` "Rf error" and
 Synthetic subset:
 
 ```json
-{"1": "CURSOR_EXAMPLE", "2": "C007-006", "3": "Example radiator", "4": "7",
+{"1": "IDENTITY_TOKEN_EXAMPLE", "2": "C007-006", "3": "Example radiator", "4": "7",
  "7": "698", "8": "446", "9": "590", "14": "7200", "16": "680", "17": "2124",
  "22": "0", "23": "1000", "34": "0"}
 ```
@@ -106,13 +126,13 @@ Synthetic mode command:
 
 ```json
 {"code": "1",
- "data": {"100": "NEXT_CURSOR_EXAMPLE", "2": "1",
+ "data": {"100": "TIME_TOKEN_EXAMPLE", "2": "1",
           "3": {"2": "C007-006", "22": "0", "15": "0"}}}
 ```
 
 | Location | Meaning |
 | --- | --- |
-| `data["100"]` | Next cursor |
+| `data["100"]` | Time token |
 | `data["2"]` | `"1"` observed; meaning unknown |
 | `data["3"]` | One command, keyed like an upload |
 | Command `"2"` | Target `id_device` |
@@ -131,6 +151,7 @@ Synthetic mode command:
 ## Open questions
 
 - Command IDs, acknowledgement, retries, expiry and errors.
-- Boot registration, home association and cursor routing. Without these the
-  messages above do not suffice for a replacement server.
+- Boot registration, home association and routing; whether the server checks
+  the identity token. Without these the messages above do not suffice for a
+  replacement server.
 - Fields `12`, `13`, `35`; the meaning of `data["2"]`.
