@@ -2,14 +2,15 @@
 
 [Overview](../README.md)
 
-Compiled in October–November 2026. The first-party observations describe the provider's service as it was in October; the November Watts source is separate third-party evidence.
+Compiled in October and November 2026. It describes the provider's service as
+it was then.
 
 | Source | Establishes |
 | --- | --- |
 | [hemphen/clevertouch](https://github.com/hemphen/clevertouch/tree/252274f52b5deab81d5d986300f53fb41511ea44) at `252274f` | Web API authentication, reads, writes, device fields, modes, temperature conversion (**Client**) |
 | The provider's web app, `script.js` (version 2.8.1) and `vendor.js` | Request construction, form encoding, modes, schedules, diagnostics, statistics (**Client**). `vendor.js` defines no further `human/` or `machine/` endpoints |
 | Controlled observation of one Touch E3 installation | Panel uploads and polls, delivered commands, RF frames in both directions, exchanges and timing, controller-state construction, inclusion, schedule execution (**Observed**) |
-| [Fl0kkie/watts-vision-local](https://github.com/Fl0kkie/watts-vision-local/tree/eac2b7bb53170ed609236d05104c28b70e3b642e) | A BT-CT02 replacement machine-API server and examples of panel command generation (**Client**, third-party). Its captures and tests are not committed; the detailed identity/time validation is retained in private research evidence |
+| [Watts Vision Local](https://github.com/Fl0kkie/watts-vision-local/tree/eac2b7bb53170ed609236d05104c28b70e3b642e) at `eac2b7b` | A server for a Watts BT-CT02 in place of the provider: the `smarthome/edit` readings (**Tentative**). Its other endpoints and command fields are not seen from this panel and not described |
 
 The observation recorded the panel's HTTP traffic, its 868 MHz traffic and the
 Web API at the same time, while changes were made at the panel, at a radiator,

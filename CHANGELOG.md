@@ -5,8 +5,9 @@ against this reference.
 
 ## Unreleased
 
-- Upstream: reinterpreted field `1` and response `100` as encoded identity/time rather than arbitrary cursors; exact encoding remains in private evidence.
-- Upstream: documented the Watts BT-CT02 local machine-API implementation as third-party leads, without treating its unshared captures or half-hour schedule writer as Touch E3 observations.
+- Upstream: field `"1"` is an identity token on every request and `data["100"]`
+  a time token on every response, not cursors. Added `smarthome/edit` and
+  `device/edit_all`.
 - Restructured the specifications into tables and short rules; no protocol change.
 - RF: added exchange and inclusion sequence diagrams and the EU band rules
   (h1.5: 1 % duty cycle or LBT+AFA).
